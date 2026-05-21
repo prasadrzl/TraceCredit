@@ -1,0 +1,13 @@
+{
+  "name": "tracecredit",
+  "private": true,
+  "workspaces": ["api", "web"],
+  "scripts": {
+    "dev:web": "yarn workspace web dev",
+    "dev:api": "yarn workspace api start:dev",
+    "build": "yarn workspaces run build",
+    "test:contracts": "cd contracts && forge test",
+    "test:api": "yarn workspace api test",
+    "lint": "yarn workspaces run lint"
+  }
+}

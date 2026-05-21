@@ -13,3 +13,10 @@ states/
 # Optional
 .env
 .env.local
+
+.DS_Store
+node_modules/
+dist/
+build/
+coverage/
+*.log
