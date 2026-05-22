@@ -33,16 +33,20 @@ abstract contract ScorableBase is ProtocolBase {
     }
 
     // ── Virtual hooks ─────────────────────────────────────────────────────────
-    /// @dev Default reads from IReputationSBT. Override in concrete if needed.
-    /// @param wallet Address to query.
-    /// @return score Current score (0–1000).
+    /**
+     * @dev Default reads score from IReputationSBT. Override in concrete if needed.
+     * @param wallet Address to query.
+     * @return score Current score (0–1000).
+     */
     function _getScore(address wallet) internal view virtual returns (uint16 score) {
         return IReputationSBT(sbtContract).getScore(wallet);
     }
 
-    /// @dev Override in concrete to return the wallet's credit tier as uint8.
-    /// @param wallet Address to query.
-    /// @return tier Tier value (0=Bronze … 4=Diamond).
+    /**
+     * @dev Override in concrete to return the wallet's credit tier as uint8.
+     * @param wallet Address to query.
+     * @return tier Tier value (0=Bronze … 4=Diamond).
+     */
     function _getTier(address wallet) internal view virtual returns (uint8 tier);
 
     // ── Internal initializer ──────────────────────────────────────────────────
