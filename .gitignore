@@ -20,7 +20,3 @@ dist/
 build/
 coverage/
 *.log
-
-contracts/out/
-contracts/cache/
-contracts/lib/

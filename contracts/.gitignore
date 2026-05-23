@@ -1,0 +1,33 @@
+# ── Foundry build artifacts ───────────────────────────────────────────────────
+out/
+cache/
+
+# ── Foundry dependencies (managed via forge install) ─────────────────────────
+lib/
+
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.local
+.env*.local
+
+# ── Broadcast logs (contain private key usage & tx hashes) ───────────────────
+broadcast/*/31337/
+broadcast/*/1/
+broadcast/*/8453/
+broadcast/*/84532/
+
+# ── Coverage ──────────────────────────────────────────────────────────────────
+lcov.info
+coverage/
+
+# ── Soldeer (alternative package manager) ────────────────────────────────────
+soldeer.lock
+dependencies/
+
+# ── Editor & OS ───────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db
