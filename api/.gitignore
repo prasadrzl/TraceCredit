@@ -6,11 +6,13 @@ dist/
 build/
 
 # ── Environment & secrets ─────────────────────────────────────────────────────
+# Commit .env.example only — all real env files are private
 .env
 .env.local
 .env.development
-.env.staging
+.env.preprod
 .env.production
+.env.staging
 .env*.local
 
 # ── NestJS / TypeScript ───────────────────────────────────────────────────────
