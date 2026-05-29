@@ -1,0 +1,139 @@
+import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
+import { ChainService } from '../chain/chain.service';
+import { ContractsService } from '../contracts/contracts.service';
+import { GraphService } from '../graph/graph.service';
+import { LiquidationService } from './liquidation.service';
+import { ProtocolGateway } from '../gateway/gateway.service';
+import { AppLogger } from '../logger/logger.service';
+import { QUEUE_LIQUIDATION } from '../queue/queue.module';
+import { LIQUIDATION_MANAGER_ABI } from '../contracts/abis';
+
+export const JOB_LIQUIDATION_SCAN = 'liquidation:scan';
+const BOT_REPEAT_INTERVAL_MS = 60_000; // 60 s
+
+@Injectable()
+export class LiquidationBot implements OnModuleInit, OnModuleDestroy {
+  private scanIntervalId: NodeJS.Timeout | null = null;
+
+  constructor(
+    @InjectQueue(QUEUE_LIQUIDATION) private readonly queue: Queue,
+    private readonly chain: ChainService,
+    private readonly contracts: ContractsService,
+    private readonly graph: GraphService,
+    private readonly liquidationService: LiquidationService,
+    private readonly gateway: ProtocolGateway,
+    private readonly logger: AppLogger,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    if (!this.chain.walletClient) {
+      this.logger.warn(
+        'LiquidationBot: no wallet client configured — keeper disabled',
+        'LiquidationBot',
+      );
+      return;
+    }
+
+    /** Schedule repeatable scan via BullMQ */
+    await this.queue.add(
+      JOB_LIQUIDATION_SCAN,
+      {},
+      {
+        repeat: { every: BOT_REPEAT_INTERVAL_MS },
+        jobId: 'liquidation-keeper',
+      },
+    );
+
+    /** Also run immediately on startup */
+    this.scanAndLiquidate();
+
+    this.logger.log('LiquidationBot keeper started (60s interval)', 'LiquidationBot');
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    if (this.scanIntervalId) clearInterval(this.scanIntervalId);
+    await this.queue.removeRepeatable(JOB_LIQUIDATION_SCAN, { every: BOT_REPEAT_INTERVAL_MS });
+  }
+
+  async scanAndLiquidate(): Promise<void> {
+    const wc = this.chain.walletClient;
+    if (!wc) return;
+
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      /** Fetch loans whose dueTime is in the past */
+      const overdueLoans = await this.graph.getOverdueLoans(nowSec);
+
+      if (overdueLoans.length === 0) {
+        this.logger.debug('No overdue loans found', 'LiquidationBot');
+        return;
+      }
+
+      this.logger.log(
+        `Found ${overdueLoans.length} overdue loan(s) — submitting batchLiquidate`,
+        'LiquidationBot',
+      );
+
+      const loanIds = overdueLoans.map((l) => BigInt(l.loanId));
+      const lm = this.contracts.addr.liquidationManager;
+
+      const { request } = await this.chain.publicClient.simulateContract({
+        address: lm,
+        abi: LIQUIDATION_MANAGER_ABI,
+        functionName: 'batchLiquidate',
+        args: [loanIds],
+        account: wc.account!,
+      });
+
+      const txHash = await wc.writeContract(request as any);
+
+      this.logger.log(`batchLiquidate submitted: tx=${txHash}`, 'LiquidationBot');
+
+      /** Wait for confirmation */
+      const receipt = await this.chain.publicClient.waitForTransactionReceipt({
+        hash: txHash as `0x${string}`,
+        confirmations: 1,
+        timeout: 120_000,
+      });
+
+      const nowTs = Math.floor(Date.now() / 1000);
+
+      /** Record each liquidated loan in the DB and emit WS events */
+      for (const loan of overdueLoans) {
+        await this.liquidationService.recordLiquidation({
+          loanId: loan.loanId,
+          borrower: loan.borrower,
+          recoveredAmount: '0', // on-chain events would supply the real amount
+          writtenOffAmount: loan.principal,
+          txHash: txHash as string,
+          blockNumber: receipt.blockNumber.toString(),
+          liquidatedAt: new Date(nowTs * 1000),
+        });
+
+        this.gateway.emitLoanLiquidated({
+          loanId: loan.loanId,
+          borrower: loan.borrower,
+          recoveredAmount: '0',
+          txHash: txHash as string,
+          timestamp: nowTs,
+        });
+      }
+
+      this.logger.log(
+        `Liquidated ${overdueLoans.length} loan(s) in block ${receipt.blockNumber}`,
+        'LiquidationBot',
+      );
+    } catch (err: any) {
+      this.logger.error(`LiquidationBot scan failed: ${err.message}`, err.stack, 'LiquidationBot');
+
+      this.gateway.emitCircuitBreaker({
+        contract: 'LiquidationManager',
+        event: 'batchLiquidate:failed',
+        details: err.message,
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    }
+  }
+}
