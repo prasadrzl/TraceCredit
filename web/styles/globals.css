@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* ── Light mode ─────────────────────────────────────────────── */
+  :root {
+    /* Backgrounds */
+    --bg-page:       #F5F4F0;
+    --bg-card:       #FFFFFF;
+    --bg-surface:    #F1EFF9;
+
+    /* Borders */
+    --border:        rgba(0,0,0,0.08);
+    --border-soft:   rgba(0,0,0,0.05);
+
+    /* Text */
+    --text-primary:   #1A1917;
+    --text-secondary: #5F5E5A;
+    --text-tertiary:  #8C8B87;
+
+    /* Brand */
+    --brand:          #534AB7;
+    --brand-hover:    #3C3489;
+    --brand-subtle:   #EEEDFE;
+
+    /* Tiers */
+    --tier-diamond:   #534AB7;
+    --tier-platinum:  #378ADD;
+    --tier-gold:      #EF9F27;
+    --tier-silver:    #B4B2A9;
+    --tier-bronze:    #D85A30;
+
+    /* Semantic */
+    --success:        #1D9E75;
+    --success-hover:  #0F6E56;
+    --success-subtle: #E1F5EE;
+    --warning:        #BA7517;
+    --warning-subtle: #FEF3E2;
+    --danger:         #E24B4A;
+    --danger-hover:   #A32D2D;
+    --danger-subtle:  #FCEBEB;
+
+    /* shadcn tokens mapped to our system */
+    --background:            var(--bg-page);
+    --foreground:            var(--text-primary);
+    --card:                  var(--bg-card);
+    --card-foreground:       var(--text-primary);
+    --popover:               var(--bg-card);
+    --popover-foreground:    var(--text-primary);
+    --primary:               var(--brand);
+    --primary-foreground:    #FFFFFF;
+    --secondary:             var(--bg-surface);
+    --secondary-foreground:  var(--text-primary);
+    --muted:                 var(--bg-surface);
+    --muted-foreground:      var(--text-secondary);
+    --accent:                var(--bg-surface);
+    --accent-foreground:     var(--text-primary);
+    --destructive:           var(--danger);
+    --destructive-foreground:#FFFFFF;
+    --border-ring:           var(--border);
+    --ring:                  rgba(83,74,183,0.2);
+    --radius:                0.75rem;
+
+    /* Chart */
+    --chart-borrow:  rgba(83,74,183,0.75);
+    --chart-repay:   rgba(29,158,117,0.65);
+  }
+
+  /* ── Dark mode ──────────────────────────────────────────────── */
+  .dark {
+    --bg-page:       #111110;
+    --bg-card:       #1C1C1A;
+    --bg-surface:    #242422;
+
+    --border:        rgba(255,255,255,0.08);
+    --border-soft:   rgba(255,255,255,0.05);
+
+    --text-primary:   #EEEDE9;
+    --text-secondary: #C2C0B6;
+    --text-tertiary:  #888780;
+
+    --brand-subtle:   rgba(83,74,183,0.18);
+    --success-subtle: rgba(29,158,117,0.15);
+    --warning-subtle: rgba(186,117,23,0.18);
+    --danger-subtle:  rgba(226,75,74,0.15);
+
+    --background:            var(--bg-page);
+    --foreground:            var(--text-primary);
+    --card:                  var(--bg-card);
+    --card-foreground:       var(--text-primary);
+    --popover:               var(--bg-card);
+    --popover-foreground:    var(--text-primary);
+    --secondary:             var(--bg-surface);
+    --secondary-foreground:  var(--text-primary);
+    --muted:                 var(--bg-surface);
+    --muted-foreground:      var(--text-secondary);
+    --accent:                var(--bg-surface);
+    --accent-foreground:     var(--text-primary);
+  }
+
+  * {
+    border-color: var(--border);
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+
+  body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Thin borders everywhere */
+  .border { border-width: 0.5px; }
+  .border-t { border-top-width: 0.5px; }
+  .border-b { border-bottom-width: 0.5px; }
+  .divide-y > * + * { border-top-width: 0.5px; }
+}
+
+@layer utilities {
+  .font-mono-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+  .card-base {
+    background-color: var(--bg-card);
+    border: 0.5px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .surface-base {
+    background-color: var(--bg-surface);
+    border: 0.5px solid var(--border-soft);
+    border-radius: 8px;
+  }
+}
