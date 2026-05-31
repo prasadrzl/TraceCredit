@@ -1,0 +1,86 @@
+import type { PoolStats, LpPosition, ApyBreakdown, PoolUtilisation, LpTransaction, YieldDataPoint } from '@/types/lend';
+import { apiClient } from '@/lib/api/client';
+import mock from '@/lib/mock/lend.json';
+
+interface ApiPoolOverview { totalAssets: string; totalOutstanding: string; utilisationBps: string; utilisationPercent: string; totalDeposited: string; paused: boolean; }
+interface ApiVaultStats { totalAssets: string; totalSupply: string; sharePrice: string; utilisationBps: string; utilisationPercent: string; reserveBalance: string; }
+interface ApiApyStats { grossApyBps: string; grossApyPercent: string; netLpApyPercent: string; utilisationBps: string; lpShareBps: number; reserveShareBps: number; }
+interface ApiPendingYield { wallet: string; shares: string; pendingUsdc: string; apyPercent: string; }
+interface ApiVolume { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string; }
+
+export async function getPoolStats(): Promise<PoolStats> {
+  try {
+    const [poolRes, vaultRes, apyRes] = await Promise.all([
+      apiClient.get<ApiPoolOverview>('/pool/overview'),
+      apiClient.get<ApiVaultStats>('/vault/stats'),
+      apiClient.get<ApiApyStats>('/yield/apy'),
+    ]);
+    return {
+      tvl: vaultRes.data.totalAssets, sharesOutstanding: vaultRes.data.totalSupply,
+      netLpApyBps: Math.round(Number(apyRes.data.netLpApyPercent) * 100),
+      utilisationBps: Number(poolRes.data.utilisationBps),
+      kinkBps: 7000, capBps: 9000, sharePrice: vaultRes.data.sharePrice, sharePriceDeltaBps: 0,
+    };
+  } catch { return mock.poolStats as PoolStats; }
+}
+
+export async function getLpPosition(wallet: string): Promise<LpPosition> {
+  try {
+    const [sharesRes, pendingRes, apyRes] = await Promise.all([
+      apiClient.get<{ wallet: string; shares: string; usdcValue: string }>(`/vault/shares/${wallet}`),
+      apiClient.get<ApiPendingYield>(`/yield/pending/${wallet}`),
+      apiClient.get<ApiApyStats>('/yield/apy'),
+    ]);
+    const netApyBps = Math.round(Number(apyRes.data.netLpApyPercent) * 100);
+    const usdcValue = Number(sharesRes.data.usdcValue) / 1e6;
+    return {
+      shares: sharesRes.data.shares, usdcValue: sharesRes.data.usdcValue,
+      poolShareBps: 0, netApyBps,
+      dailyYield: (usdcValue * (netApyBps / 10000) / 365).toFixed(6),
+      annualYield: (usdcValue * (netApyBps / 10000)).toFixed(6),
+      pendingYield: pendingRes.data.pendingUsdc,
+      totalDeposited: sharesRes.data.usdcValue, redemptionValue: sharesRes.data.usdcValue,
+    };
+  } catch { return mock.lpPosition as LpPosition; }
+}
+
+export async function getApyBreakdown(): Promise<ApyBreakdown> {
+  try {
+    const res = await apiClient.get<ApiApyStats>('/yield/apy');
+    const grossBps = Math.round(Number(res.data.grossApyPercent) * 100);
+    const netBps = Math.round(Number(res.data.netLpApyPercent) * 100);
+    return { grossApyBps: grossBps, reserveCutBps: grossBps - netBps, netLpApyBps: netBps };
+  } catch { return mock.apyBreakdown as ApyBreakdown; }
+}
+
+export async function getPoolUtilisation(): Promise<PoolUtilisation> {
+  try {
+    const [poolRes, apyRes, vaultRes] = await Promise.all([
+      apiClient.get<ApiPoolOverview>('/pool/overview'),
+      apiClient.get<ApiApyStats>('/yield/apy'),
+      apiClient.get<ApiVaultStats>('/vault/stats'),
+    ]);
+    const grossBps = Math.round(Number(apyRes.data.grossApyPercent) * 100);
+    const netBps = Math.round(Number(apyRes.data.netLpApyPercent) * 100);
+    return {
+      currentUtilBps: Number(poolRes.data.utilisationBps), currentBorrowAprBps: grossBps,
+      kinkBps: 7000, capBps: 9000, grossPoolApyBps: grossBps, reserveFactorBps: grossBps - netBps,
+      reserveBalance: vaultRes.data.reserveBalance, atKinkWarningBps: 7000,
+    };
+  } catch { return mock.poolUtilisation as PoolUtilisation; }
+}
+
+export async function getLpTransactions(_wallet: string): Promise<LpTransaction[]> {
+  return mock.transactions as LpTransaction[];
+}
+
+export async function getYieldChart7d(): Promise<YieldDataPoint[]> {
+  try {
+    const res = await apiClient.get<ApiVolume[]>('/analytics/volume?days=7');
+    return res.data.map(v => ({
+      date: v.date,
+      dailyYield: (Number(v.borrowVolume) / 1e6 * 0.0047 / 365).toFixed(6),
+      borrowVolume: (Number(v.borrowVolume) / 1e6).toFixed(2),
+    }));
+  } catch { return mock.yieldChart7d as YieldDataPoint[]; }
+}
