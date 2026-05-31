@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "totalLoans": 10,
+    "totalBorrowed": "24580",
+    "totalRepaid": "21700",
+    "repaidPct": 88.3,
+    "defaults": 0,
+    "defaultRate": 0.0
+  },
+  "loans": [
+    { "loanNum": 46, "txHash": "0x4a1887d09", "openedDate": "Jun 01, 2026", "openedIso": "2026-06-01", "principal": "1500", "interestPaid": "5.20", "interestPct": 0.35, "aprBps": 1400, "state": "Active",      "deadline": "Jul 01, 2026", "daysLeft": 27 },
+    { "loanNum": 45, "txHash": "0xc7023f88",  "openedDate": "May 28, 2026", "openedIso": "2026-05-28", "principal": "480",  "interestPaid": "12.40","interestPct": 2.58, "aprBps": 1800, "state": "GracePeriod", "deadline": "May 31, 2026", "gracePeriodLeft": "1d 4h", "graceDeadline": "May 31, 2026" },
+    { "loanNum": 44, "txHash": "0x1bb9aa54",  "openedDate": "May 24, 2026", "openedIso": "2026-05-24", "principal": "2000", "interestPaid": "28.16","interestPct": 1.41, "aprBps": 1400, "state": "Repaid",     "deadline": "Jun 02, 2026", "closedNote": "closed 9 days early" },
+    { "loanNum": 43, "txHash": "0x6ee21c0a",  "openedDate": "May 18, 2026", "openedIso": "2026-05-18", "principal": "5000", "interestPaid": "87.50","interestPct": 1.75, "aprBps": 1400, "state": "Repaid",     "deadline": "May 31, 2026", "closedNote": "closed on time" },
+    { "loanNum": 41, "txHash": "0xa1f05d27",  "openedDate": "May 12, 2026", "openedIso": "2026-05-12", "principal": "1200", "interestPaid": "14.40","interestPct": 1.20, "aprBps": 1800, "state": "Repaid",     "deadline": "May 22, 2026", "closedNote": "closed on time" },
+    { "loanNum": 40, "txHash": "0xf5d3b1c6",  "openedDate": "May 08, 2026", "openedIso": "2026-05-08", "principal": "3500", "interestPaid": "48.60","interestPct": 1.39, "aprBps": 1400, "state": "Repaid",     "deadline": "May 20, 2026", "closedNote": "closed on time" },
+    { "loanNum": 38, "txHash": "0x2c47e08b",  "openedDate": "May 02, 2026", "openedIso": "2026-05-02", "principal": "2300", "interestPaid": "32.10","interestPct": 1.40, "aprBps": 1400, "state": "Repaid",     "deadline": "May 16, 2026", "closedNote": "closed on time" },
+    { "loanNum": 35, "txHash": "0x9b62cc92",  "openedDate": "Apr 24, 2026", "openedIso": "2026-04-24", "principal": "800",  "interestPaid": "8.00", "interestPct": 1.00, "aprBps": 1400, "state": "Repaid",     "deadline": "May 04, 2026", "closedNote": "closed on time" },
+    { "loanNum": 31, "txHash": "0x55a10d28",  "openedDate": "Apr 14, 2026", "openedIso": "2026-04-14", "principal": "1100", "interestPaid": "22.00","interestPct": 2.00, "aprBps": 1800, "state": "Repaid",     "deadline": "Apr 28, 2026", "closedNote": "closed on time" },
+    { "loanNum": 28, "txHash": "0x310aed14",  "openedDate": "Apr 06, 2026", "openedIso": "2026-04-06", "principal": "700",  "interestPaid": "9.80", "interestPct": 1.40, "aprBps": 1400, "state": "Repaid",     "deadline": "Apr 20, 2026", "closedNote": "closed on time" }
+  ]
+}

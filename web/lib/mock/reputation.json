@@ -1,0 +1,87 @@
+{
+  "sbt": {
+    "wallet":       "0x3f2a…4e5f",
+    "tokenId":      1204,
+    "mintedDate":   "2024-03-12",
+    "stakeLocked":  "50000000",
+    "status":       "Active",
+    "frozen":       false
+  },
+  "reputationScore": {
+    "score":          650,
+    "tier":           "Gold",
+    "nextTier":       "Platinum",
+    "nextTierScore":  601,
+    "diamondScore":   801,
+    "ptsToNextTier":  151,
+    "ptsToDiamond":   151,
+    "unlocksAtDiamond": "25000000000",
+    "rateAtDiamond":  1000,
+    "limitLockupDays": 30
+  },
+  "creditSnapshot": {
+    "tier":           "Gold",
+    "creditLimit":    "5000000000",
+    "creditUsed":     "2880000000",
+    "creditAvailable":"2120000000",
+    "interestRateBps": 1400,
+    "limitIncreaseDays": 42,
+    "activeLoans":    2,
+    "loansRepaid":    8,
+    "defaults":       0,
+    "lastActivityDaysAgo": 2,
+    "sbtProtection": {
+      "guardianSet":  "3-of-5 multisig",
+      "stakeVault":   "50 USDC locked",
+      "unlockDelay":  "30 days"
+    }
+  },
+  "scoreHistory": [
+    { "label":"D-29", "score":572 },
+    { "label":"D-23", "score":614 },
+    { "label":"D-17", "score":614 },
+    { "label":"D-11", "score":564 },
+    { "label":"D-5",  "score":632 },
+    { "label":"Today","score":650 }
+  ],
+  "scoreStats": {
+    "change30d":  78,
+    "peakScore":  680,
+    "signalCount":14
+  },
+  "recentEvents": [
+    { "id":"e1", "type":"repayment", "label":"On-time repayment",      "sub":"Loan #38 · block 19,512,004",         "score":650, "points":22,  "daysAgo":2  },
+    { "id":"e2", "type":"dao",       "label":"DAO governance vote",    "sub":"Snapshot prop #47 · block 19,508,211","score":628, "points":2,   "daysAgo":5  },
+    { "id":"e3", "type":"cross",     "label":"Cross-protocol repayment","sub":"EAS · Aave v3 · block 19,501,088",  "score":626, "points":12,  "daysAgo":8  },
+    { "id":"e4", "type":"late",      "label":"Late repayment penalty",  "sub":"Loan #31 grace · block 19,488,770",  "score":614, "points":-50, "daysAgo":14 },
+    { "id":"e5", "type":"repayment", "label":"On-time repayment",      "sub":"Loan #31 partial · block 19,472,330","score":664, "points":18,  "daysAgo":22 }
+  ],
+  "signalBreakdown": [
+    { "id":"sb1", "type":"repayment", "label":"On-time repayments",  "count":8,  "points":310  },
+    { "id":"sb2", "type":"cross",     "label":"Cross-protocol repay","count":3,  "points":48   },
+    { "id":"sb3", "type":"wallet",    "label":"Wallet age",          "meta":"14 mo","points":14 },
+    { "id":"sb4", "type":"dao",       "label":"DAO participation",   "count":6,  "points":8    },
+    { "id":"sb5", "type":"holdings",  "label":"Token holdings",      "meta":null,"points":5    },
+    { "id":"sb6", "type":"stake",     "label":"SBT stake deposit",   "meta":null,"points":5    },
+    { "id":"sb7", "type":"late",      "label":"Late repayment",      "count":1,  "points":-50  },
+    { "id":"sb8", "type":"decay",     "label":"Inactivity decay",    "meta":null,"points":-2   }
+  ],
+  "netScore": {
+    "base":        312,
+    "tierBonus":   338,
+    "displayed":   650,
+    "netPoints":   338
+  },
+  "attestationSources": [
+    { "id":"as1", "name":"Protocol internal",  "sub":"Last signal: 2d ago · Loan #38",       "status":"Active",       "attested":null,    "quorum":null  },
+    { "id":"as2", "name":"EAS · Aave v3",      "sub":"Last attestation: 8d ago · 3 signals",  "status":"Active",       "attested":"3/5",   "dots":3       },
+    { "id":"as3", "name":"Gitcoin Passport",   "sub":"Last attestation: 21d ago",             "status":"ExpiringSoon", "attested":"2/5",   "dots":2       },
+    { "id":"as4", "name":"ENS domain",         "sub":"No signals yet",                        "status":"NotAttested",  "attested":null,    "quorum":null  }
+  ],
+  "signalDecay": [
+    { "id":"sd1", "signal":"Late repayment (Loan #31)", "applied":"2026-05-09", "expires":"2027-05-09", "duration":"12 mo",  "points":-50, "expiring":false },
+    { "id":"sd2", "signal":"Cross-protocol repay",      "applied":"2026-05-15", "expires":"2027-05-15", "duration":"12 mo",  "points":48,  "expiring":false },
+    { "id":"sd3", "signal":"DAO participation",         "applied":"2026-05-18", "expires":"2026-11-18", "duration":"6 mo",   "points":8,   "expiring":false },
+    { "id":"sd4", "signal":"Gitcoin Passport",          "applied":"2026-05-02", "expires":"2026-11-02", "duration":"expiring","points":6, "expiring":true  }
+  ]
+}

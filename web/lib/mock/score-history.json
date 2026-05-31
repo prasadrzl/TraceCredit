@@ -1,0 +1,40 @@
+{
+  "header": {
+    "score": 650, "maxScore": 1000, "tier": "Gold",
+    "changePoints30d": 78, "nextTier": "Platinum", "nextTierScore": 601,
+    "positiveSignals30d": 103, "penalties30d": -54,
+    "description": "Your reputation is computed from on-chain repayments, DAO participation, cross-protocol attestations, and identity proofs. Every signal below is backed by an EAS attestation you can independently verify."
+  },
+  "trend30d": [
+    {"date":"Apr 23","score":595},{"date":"Apr 26","score":597},{"date":"Apr 29","score":612},
+    {"date":"May 02","score":611},{"date":"May 05","score":614},{"date":"May 08","score":620},
+    {"date":"May 11","score":622},{"date":"May 14","score":626},{"date":"May 17","score":624},
+    {"date":"May 20","score":628},{"date":"May 23","score":640},{"date":"May 26","score":646},
+    {"date":"May 29","score":650},{"date":"Jun 01","score":648},{"date":"Jun 04","score":650},
+    {"date":"Jun 07","score":645},{"date":"Jun 10","score":648},{"date":"Jun 13","score":650}
+  ],
+  "signalBreakdown": [
+    {"label":"Repayment",    "pct":100,"points":66, "color":"#22c55e"},
+    {"label":"Cross-protocol","pct":48, "points":32, "color":"#3b82f6"},
+    {"label":"Identity",     "pct":30, "points":20, "color":"#a855f7"},
+    {"label":"DAO governance","pct":6,  "points":4,  "color":"#6366f1"},
+    {"label":"Wallet age",   "pct":2,  "points":1,  "color":"#64748b"},
+    {"label":"Penalties",    "pct":76, "points":-50, "color":"#ef4444","isNegative":true},
+    {"label":"Decay",        "pct":6,  "points":-4,  "color":"#94a3b8","isNegative":true}
+  ],
+  "events": [
+    {"id":"e1","date":"Jun 15, 2026","block":"#18,472,481","signalType":"ON_TIME_REPAYMENT",       "signalLabel":"ON_TIME_REPAYMENT",       "signalSub":"On-time repayment",    "source":"Loan #38",           "sourceType":"Repayment",      "delta":22, "scoreAfter":650,"txHash":"0x8d41…b2e7"},
+    {"id":"e2","date":"Jun 12, 2026","block":"#18,445,118","signalType":"DAO_VOTE",                "signalLabel":"DAO_VOTE",                "signalSub":"DAO vote",             "source":"Snapshot prop #47",  "sourceType":"Governance",     "delta":2,  "scoreAfter":628,"txHash":"0x2c47…e08b"},
+    {"id":"e3","date":"Jun 09, 2026","block":"#18,417,682","signalType":"CROSS_PROTOCOL_REPAYMENT","signalLabel":"CROSS_PROTOCOL_REPAYMENT","signalSub":"Cross-protocol repay", "source":"EAS · Aave V3",       "sourceType":"Cross-protocol",  "delta":12, "scoreAfter":626,"txHash":"0x6ee2…1c0a"},
+    {"id":"e4","date":"Jun 06, 2026","block":"#18,389,344","signalType":"ON_TIME_REPAYMENT",       "signalLabel":"ON_TIME_REPAYMENT",       "signalSub":"On-time repayment",    "source":"Loan #36",           "sourceType":"Repayment",      "delta":18, "scoreAfter":614,"txHash":"0x1bb9…aa54"},
+    {"id":"e5","date":"Jun 03, 2026","block":"#18,361,218","signalType":"LATE_REPAYMENT",          "signalLabel":"LATE_REPAYMENT",          "signalSub":"Late repayment",       "source":"Loan #31",           "sourceType":"Penalty",        "delta":-50,"scoreAfter":596,"txHash":"0xa1f0…5d27",
+      "attestation":{"schema":"bytes32 loanId, uint256 daysLate","uid":"0xcc7a08e2_45b0","attester":"0x9a9aE2_3F7C (LoanManager)","recipient":"0x3f2a_9c14","evidenceHash":"0x71ee0d_14a2","revocable":false,"quorum":5,"maxQuorum":5,"rawPayload":{"loanId":"0x31","daysLate":3,"graceUsed":true}}},
+    {"id":"e6","date":"May 31, 2026","block":"#18,330,081","signalType":"ATTESTATION_RECEIVED",    "signalLabel":"ATTESTATION_RECEIVED",    "signalSub":"Attestation received", "source":"Gitcoin Passport",   "sourceType":"Identity",       "delta":6,  "scoreAfter":646,"txHash":"0xf5d3…b1c6"},
+    {"id":"e7","date":"May 28, 2026","block":"#18,312,478","signalType":"ON_TIME_REPAYMENT",       "signalLabel":"ON_TIME_REPAYMENT",       "signalSub":"On-time repayment",    "source":"Loan #31",           "sourceType":"Repayment",      "delta":18, "scoreAfter":640,"txHash":"0x4a18…7d09"},
+    {"id":"e8","date":"May 25, 2026","block":"#18,288,016","signalType":"DAO_VOTE",                "signalLabel":"DAO_VOTE",                "signalSub":"DAO vote",             "source":"Snapshot prop #45",  "sourceType":"Governance",     "delta":2,  "scoreAfter":622,"txHash":"0xc702…3f88"},
+    {"id":"e9","date":"May 22, 2026","block":"#18,263,778","signalType":"PARTIAL_REPAYMENT",       "signalLabel":"PARTIAL_REPAYMENT",       "signalSub":"Partial repayment",    "source":"Loan #29",           "sourceType":"Repayment",      "delta":8,  "scoreAfter":620,"txHash":"0x9b62…41a3"},
+    {"id":"e10","date":"May 18, 2026","block":"#18,234,556","signalType":"WALLET_AGE",             "signalLabel":"WALLET_AGE",             "signalSub":"Wallet age",           "source":"auto · Decay sentinel","sourceType":"Passive",        "delta":1,  "scoreAfter":612,"txHash":"0x7d1f…cc92"},
+    {"id":"e11","date":"May 15, 2026","block":"#18,207,314","signalType":"KYC_VERIFIED",           "signalLabel":"KYC_VERIFIED",           "signalSub":"KYC verified",         "source":"Sumsub",             "sourceType":"Identity",       "delta":14, "scoreAfter":611,"txHash":"0x6c2a…11d4"},
+    {"id":"e12","date":"May 12, 2026","block":"#18,188,092","signalType":"DECAY",                  "signalLabel":"DECAY",                  "signalSub":"Inactivity decay",     "source":"auto · Inactivity",  "sourceType":"Passive",        "delta":-4, "scoreAfter":597,"txHash":"0x55a1…0d28"}
+  ]
+}

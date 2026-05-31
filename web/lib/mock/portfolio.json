@@ -1,0 +1,105 @@
+{
+  "netPosition": {
+    "netValue":      "7536000000",
+    "yieldEarned":   "416000000",
+    "lpValue":       "10417000000",
+    "outstandingDebt":"2881000000"
+  },
+  "positionStats": {
+    "repScore":      650,
+    "repTier":       "Gold",
+    "creditUsedBps": 5760,
+    "creditLimit":   "5000000000",
+    "creditUsed":    "2880000000",
+    "health":        "Good",
+    "healthSub":     "No defaults · 8 repaid",
+    "urgentLoans":   1,
+    "urgentSub":     "Grace · 1d left",
+    "nextLimitDays": 42,
+    "nextLimitSub":  "Gold · 60-day lockup",
+    "lpShares":      "10000000000000",
+    "lpApyBps":      476,
+    "pendingYield":  "23040000",
+    "sbtStakeLocked":"50000000",
+    "sbtUnlockDelay":"30-day unlock delay"
+  },
+  "borrowPositions": {
+    "openCount": 2,
+    "historicalCount": 8,
+    "alert": {
+      "loanId": "39",
+      "message": "Loan #39 is in grace period. Expires May 24 (1 day). Repay $492.40 to avoid -200 pts and 12-month credit freeze.",
+      "repayAmount": "492400000"
+    },
+    "active": [
+      {
+        "loanId":   "42",
+        "state":    "Active",
+        "openedDate":"2026-05-23",
+        "deadline": "2026-06-22",
+        "daysLeft": 30,
+        "tier":     "Gold",
+        "repaidBps":0,
+        "principal":"2400000000",
+        "interest": "23040000",
+        "note":     "30d deadline · Gold tier"
+      },
+      {
+        "loanId":   "39",
+        "state":    "GracePeriod",
+        "openedDate":"2026-05-14",
+        "deadline": "2026-05-24",
+        "daysLeft": 1,
+        "tier":     "Silver",
+        "repaidBps":0,
+        "principal":"480000000",
+        "interest": "12400000",
+        "note":     "deadline passed · -50 pts applied"
+      }
+    ],
+    "historical": [
+      {
+        "loanId":    "38",
+        "state":     "Repaid",
+        "dateRange": "May 10 → May 21",
+        "repaidBps": 10000,
+        "principal": "3100000000",
+        "note":      "On time · +22 pts"
+      },
+      {
+        "loanId":    "31",
+        "state":     "Repaid",
+        "dateRange": "Apr 28 → May 12",
+        "repaidBps": 10000,
+        "principal": "1800000000",
+        "note":      "late · -50 pts"
+      }
+    ]
+  },
+  "reputationSnapshot": {
+    "score":      650,
+    "tier":       "Gold",
+    "change30d":  78,
+    "signals": [
+      { "label":"On-time repayments", "points": 310, "color":"var(--success)"        },
+      { "label":"Cross-protocol",     "points":  48, "color":"var(--tier-platinum)"  },
+      { "label":"Late repayment",     "points": -50, "color":"var(--danger)"         },
+      { "label":"Other signals",      "points":  32, "color":"var(--text-tertiary)"  }
+    ]
+  },
+  "recentActivity": [
+    { "id":"a1", "type":"repay",     "label":"Loan repaid",       "sub":"Loan #38 · +22 rep pts · block 19,512,004", "amount":"-3148000000", "daysAgo":2  },
+    { "id":"a2", "type":"borrow",    "label":"Borrow",            "sub":"Loan #42 opened · 14% APR · 30d term",      "amount":"2400000000",  "daysAgo":2  },
+    { "id":"a3", "type":"score",     "label":"EAS attestation",   "sub":"Aave v3 cross-protocol · +12 rep pts",      "scoreChange":12,       "daysAgo":8  },
+    { "id":"a4", "type":"deposit",   "label":"LP deposit",        "sub":"5,000 USDC · 4.88 shares",                  "amount":"5000000000",  "daysAgo":13 },
+    { "id":"a5", "type":"penalty",   "label":"Late penalty",      "sub":"Loan #31 grace period · -50 rep pts",       "scoreChange":-50,      "daysAgo":14 }
+  ],
+  "netPositionChart": [
+    { "label":"D-29", "lp":10000, "debt":-5200, "net":4800 },
+    { "label":"D-23", "lp":10000, "debt":-5200, "net":4800 },
+    { "label":"D-17", "lp":10000, "debt":-7200, "net":2800 },
+    { "label":"D-11", "lp":10200, "debt":-7200, "net":3000 },
+    { "label":"D-5",  "lp":10300, "debt":-4200, "net":6100 },
+    { "label":"Today","lp":10417, "debt":-2881, "net":7536 }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "loan": {
+    "loanNum": 42, "state": "Active",
+    "borrower": "0x3f2a…9c14", "openedIso": "2026-05-23T14:08:00Z",
+    "openedDisplay": "2026-05-23 14:08 UTC", "network": "Base",
+    "deadline": "Jun 22, 2026", "daysLeft": 5,
+    "principal": "2400", "outstanding": "2423.04",
+    "interestRateBps": 1400, "gracePeriodDays": 7,
+    "creditLimit": "5000", "creditUsed": "2400", "creditPct": 48,
+    "openTxHash": "0x8d41…b2e7",
+    "basescanUrl": "https://basescan.org/tx/0x8d41b2e7",
+    "requestedAt": "May 23, 14:08", "activeAt": "Today · Jun 17",
+    "activeDate": "Jun 17"
+  },
+  "interest": {
+    "principal": "2400", "accruedInterest": "23.04",
+    "dailyRate": "0.92", "aprBps": 1400,
+    "blocksElapsed": 1080000, "projectedAtDeadline": "2427.60",
+    "projectedDisplay": "$27.60 projected"
+  },
+  "repayments": [],
+  "scoreImpact": {
+    "projectedPoints": 22, "repaymentNumber": 9,
+    "currentScore": 650, "currentTier": "Gold", "currentTierScore": 401,
+    "nextTier": "Platinum", "nextTierScore": 601, "ptsToNextTier": 49
+  }
+}

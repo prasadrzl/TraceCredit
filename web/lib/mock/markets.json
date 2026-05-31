@@ -1,0 +1,121 @@
+{
+  "marketStats": {
+    "borrowVol24h": "5000000000000",
+    "repayVol24h": "3000000000000",
+    "utilisationBps": 4000,
+    "liquidations24h": 1,
+    "liquidationsWrittenOff24h": "200000000",
+    "totalBorrowers": 89,
+    "activeBorrowers": 34,
+    "repaidBorrowers": 55,
+    "borrowVolDeltaBps": 830,
+    "repayVolDeltaBps": 410
+  },
+
+  "volume7d": [
+    { "date": "2026-05-17", "borrowVolume": "3400000000000", "repayVolume": "2000000000000" },
+    { "date": "2026-05-18", "borrowVolume": "5100000000000", "repayVolume": "2800000000000" },
+    { "date": "2026-05-19", "borrowVolume": "3800000000000", "repayVolume": "2500000000000" },
+    { "date": "2026-05-20", "borrowVolume": "5500000000000", "repayVolume": "3200000000000" },
+    { "date": "2026-05-21", "borrowVolume": "4200000000000", "repayVolume": "2400000000000" },
+    { "date": "2026-05-22", "borrowVolume": "3000000000000", "repayVolume": "2200000000000" },
+    { "date": "2026-05-23", "borrowVolume": "3800000000000", "repayVolume": "2800000000000" }
+  ],
+
+  "recentBorrows": [
+    { "loanId": "42", "borrower": "0x3f2a…2c14", "tier": "Gold",     "principal": "2400000000",  "aprBps": 1400, "state": "Active",      "deadline": "2026-06-21" },
+    { "loanId": "41", "borrower": "0xab71…3c5d", "tier": "Platinum", "principal": "9200000000",  "aprBps": 1000, "state": "Repaid",      "deadline": "2026-06-18" },
+    { "loanId": "40", "borrower": "0x19cc…f3e4", "tier": "Diamond",  "principal": "42000000000", "aprBps": 700,  "state": "Active",      "deadline": "2026-06-20" },
+    { "loanId": "39", "borrower": "0x88de…1d2c", "tier": "Silver",   "principal": "480000000",   "aprBps": 1800, "state": "GracePeriod", "deadline": "2026-05-24" },
+    { "loanId": "38", "borrower": "0xf014…c1b2", "tier": "Gold",     "principal": "3100000000",  "aprBps": 1400, "state": "Repaid",      "deadline": "2026-05-20" },
+    { "loanId": "37", "borrower": "0x72b3…9e1f", "tier": "Platinum", "principal": "18500000000", "aprBps": 1000, "state": "Active",      "deadline": "2026-06-15" },
+    { "loanId": "36", "borrower": "0xcc01…7b8c", "tier": "Silver",   "principal": "300000000",   "aprBps": 1800, "state": "Repaid",      "deadline": "2026-05-10" },
+    { "loanId": "35", "borrower": "0x9a44…e1f2", "tier": "Gold",     "principal": "4800000000",  "aprBps": 1400, "state": "Active",      "deadline": "2026-06-22" },
+    { "loanId": "34", "borrower": "0x6b22…3a4b", "tier": "Bronze",   "principal": "620000000",   "aprBps": 2200, "state": "GracePeriod", "deadline": "2026-05-25" },
+    { "loanId": "33", "borrower": "0xde90…e2f3", "tier": "Platinum", "principal": "11200000000", "aprBps": 1000, "state": "Active",      "deadline": "2026-06-14" }
+  ],
+
+  "poolDepthCurve": [
+    { "utilPct": 0,  "belowKink": 4.0,  "aboveKink": null },
+    { "utilPct": 10, "belowKink": 5.2,  "aboveKink": null },
+    { "utilPct": 20, "belowKink": 6.4,  "aboveKink": null },
+    { "utilPct": 30, "belowKink": 7.6,  "aboveKink": null },
+    { "utilPct": 40, "belowKink": 8.8,  "aboveKink": null },
+    { "utilPct": 50, "belowKink": 9.2,  "aboveKink": null },
+    { "utilPct": 60, "belowKink": 9.6,  "aboveKink": null },
+    { "utilPct": 70, "belowKink": 10.0, "aboveKink": 14.0 },
+    { "utilPct": 80, "belowKink": null, "aboveKink": 52.0 },
+    { "utilPct": 90, "belowKink": null, "aboveKink": 100.0 }
+  ],
+
+  "poolDepthStats": {
+    "currentUtilBps": 4000,
+    "belowKinkAprBps": 1010,
+    "aboveKinkMinBps": 1400,
+    "aboveKinkMaxBps": 10000,
+    "lpNetApyBps": 345,
+    "kinkBps": 7000,
+    "capBps": 9000,
+    "reserveFactorBps": 1500
+  },
+
+  "scoreDistribution": [
+    { "bucket": 0,   "count": 3  },
+    { "bucket": 100, "count": 8  },
+    { "bucket": 200, "count": 11 },
+    { "bucket": 300, "count": 14 },
+    { "bucket": 400, "count": 18 },
+    { "bucket": 500, "count": 22 },
+    { "bucket": 600, "count": 25 },
+    { "bucket": 700, "count": 22 },
+    { "bucket": 800, "count": 18 },
+    { "bucket": 900, "count": 16 }
+  ],
+
+  "tierDistribution": {
+    "Diamond":  13,
+    "Platinum": 14,
+    "Gold":     28,
+    "Silver":   30,
+    "Bronze":   16
+  },
+
+  "scoreDistributionMeta": {
+    "totalWallets": 157,
+    "activeWallets": 94
+  },
+
+  "recentLiquidations": [
+    {
+      "loanId": "15",
+      "tier": "Silver",
+      "borrower": "0xdc09…3d2c",
+      "recovered": "800000000",
+      "writtenOff": "200000000",
+      "daysAgo": 3
+    },
+    {
+      "loanId": "8",
+      "tier": "Bronze",
+      "borrower": "0x44a1…b7e8",
+      "recovered": "340000000",
+      "writtenOff": "160000000",
+      "daysAgo": 9
+    },
+    {
+      "loanId": "3",
+      "tier": "Silver",
+      "borrower": "0x11bf…6a7b",
+      "recovered": "1200000000",
+      "writtenOff": "300000000",
+      "daysAgo": 17
+    }
+  ],
+
+  "liquidationStats": {
+    "total": 8,
+    "totalRecovered": "12000000000",
+    "totalWrittenOff": "3000000000",
+    "recoveryRateBps": 8000
+  }
+}

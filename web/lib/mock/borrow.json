@@ -1,0 +1,58 @@
+{
+  "borrowerProfile": {
+    "wallet":        "0x3f2a…4e5f",
+    "score":         590,
+    "tier":          "Gold",
+    "creditLimit":   "5000000000",
+    "creditUsed":    "3250000000",
+    "creditAvailable":"1750000000",
+    "interestRateBps": 1400,
+    "rateLimit24h":  "2500000000",
+    "rateLimitUsed": "500000000",
+    "rateLimitResetSec": 66120,
+    "nextTierScore": 601,
+    "nextTier":      "Platinum",
+    "nextTierCreditLimit": "25000000000",
+    "nextTierRateBps": 1000,
+    "scoreToNextTier": 11
+  },
+  "activeLoans": [
+    {
+      "loanId":    "42",
+      "state":     "Active",
+      "openedDate":"2026-05-23",
+      "network":   "Base",
+      "principal": "2400000000",
+      "interest":  "23040000",
+      "aprBps":    1400,
+      "repaid":    "0",
+      "totalDue":  "2423040000",
+      "deadline":  "2026-06-22",
+      "daysLeft":  30,
+      "gracePeriodDays": 7
+    },
+    {
+      "loanId":    "39",
+      "state":     "GracePeriod",
+      "openedDate":"2026-05-14",
+      "network":   "Base",
+      "principal": "480000000",
+      "interest":  "12400000",
+      "aprBps":    1800,
+      "repaid":    "0",
+      "totalDue":  "492400000",
+      "deadline":  "2026-05-24",
+      "daysLeft":  1,
+      "graceExpires": "2026-05-24",
+      "gracePeriodDays": 7,
+      "scoreHitOnDefault": -200,
+      "freezeMonthsOnDefault": 12
+    }
+  ],
+  "scoreSignals": [
+    { "id":"s1", "type":"repayment",   "label":"On-time repayment",    "sub":"Loan #38 · 2d ago",    "daysAgo":2,  "points":22  },
+    { "id":"s2", "type":"dao",         "label":"DAO vote",             "sub":"Snapshot · 5d ago",    "daysAgo":5,  "points":2   },
+    { "id":"s3", "type":"cross",       "label":"Cross-protocol repay", "sub":"EAS · Aave · 8d ago",  "daysAgo":8,  "points":12  },
+    { "id":"s4", "type":"late",        "label":"Late repayment",       "sub":"Loan #31 · 14d ago",   "daysAgo":14, "points":-50 }
+  ]
+}

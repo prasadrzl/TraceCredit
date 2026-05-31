@@ -1,0 +1,47 @@
+{
+  "summary": {
+    "totalLiquidations": 8,
+    "allTimePctOfLoans": 0.4,
+    "totalRecovered": "12000000",
+    "recoveredPctOfPrincipal": 80,
+    "totalWrittenOff": "3000000",
+    "recoveryRate": 80.0,
+    "recoveryRateChange": 2.4
+  },
+  "records": [
+    { "loanNum": 28, "loanTxHash": "0x8d41b2e7", "borrowerShort": "0x7d92…11c3", "borrowerScore": 240, "tier": "Silver", "principal": "1800000", "recovered": "1800000", "recoveryPct": 100, "keeperTxHash": "0x4a1f7d09", "keeperDate": "Jun 04, 2026" },
+    { "loanNum": 24, "loanTxHash": "0xc7023f88", "borrowerShort": "0xa14b…9f02", "borrowerScore": 150, "tier": "Bronze", "principal": "1500000", "recovered": "1200000", "writtenOff": "300000", "recoveryPct": 80, "keeperTxHash": "0x1bb6aa54", "keeperDate": "May 28, 2026" },
+    { "loanNum": 21, "loanTxHash": "0x6ee21c0a", "borrowerShort": "0x33e1…04b1", "borrowerScore": 320, "tier": "Silver", "principal": "2200000", "recovered": "2200000", "recoveryPct": 100, "keeperTxHash": "0xa1f05d27", "keeperDate": "May 19, 2026" },
+    { "loanNum": 18, "loanTxHash": "0xf5d3b1c6", "borrowerShort": "0xb9f1…cc22", "borrowerScore": 210, "tier": "Silver", "principal": "1700000", "recovered": "1240000", "writtenOff": "460000", "recoveryPct": 73, "keeperTxHash": "0x2c47e08b", "keeperDate": "May 10, 2026" },
+    { "loanNum": 16, "loanTxHash": "0x9b6241a3", "borrowerShort": "0x44ad…8801", "borrowerScore": 160, "tier": "Bronze", "principal": "800000",  "recovered": "800000",  "recoveryPct": 100, "keeperTxHash": "0x7d1fcc92", "keeperDate": "May 02, 2026" },
+    { "loanNum": 14, "loanTxHash": "0x6c2a5d27", "borrowerShort": "0x6c2a…11d4", "borrowerScore": 290, "tier": "Silver", "principal": "1900000", "recovered": "880000",  "writtenOff": "1020000", "recoveryPct": 46, "keeperTxHash": "0x6c2a11d4", "keeperDate": "Apr 24, 2026" },
+    { "loanNum": 11, "loanTxHash": "0x55a10d28", "borrowerShort": "0xf012…7e80", "borrowerScore": 150, "tier": "Bronze", "principal": "1100000", "recovered": "880000",  "writtenOff": "220000", "recoveryPct": 80, "keeperTxHash": "0x55a10d28", "keeperDate": "Apr 14, 2026" },
+    { "loanNum": 7,  "loanTxHash": "0x310aed14", "borrowerShort": "0x2018…b0d3", "borrowerScore": 200, "tier": "Bronze", "principal": "1000000", "recovered": "1000000", "recoveryPct": 100, "keeperTxHash": "0x310aed14", "keeperDate": "Mar 30, 2026" }
+  ],
+  "recoveryBreakdown": {
+    "recovered": 12000000,
+    "writtenOff": 3000000,
+    "total": 15000000
+  },
+  "reserveFund": {
+    "balance": 5000000,
+    "healthPct": 98.4,
+    "badDebtAbsorbed": -3000000,
+    "netInflows30d": 84200,
+    "coverageRatio": 1.67,
+    "targetFloor": 2500000
+  },
+  "keeperBot": {
+    "status": "online",
+    "lastActiveMinsAgo": 18,
+    "nextScanSecs": 232,
+    "address": "0x9aE2_3F7C",
+    "batchSize": 10,
+    "scanIntervalMins": 5,
+    "txSuccessRatePct": 99.7,
+    "gasSpent30dEth": 0.184
+  },
+  "activity": [
+    { "timeUtc": "11:42 UTC", "minsAgo": 18, "loanNum": 28, "borrowerShort": "0x7d92…11c3", "recovered": "+$1800K", "writtenOff": "0 written off", "txHash": "0x8d41…b2e7", "note": "Full recovery via reserve fund swap · keeper batch #482", "nextScanSecs": 232 }
+  ]
+}

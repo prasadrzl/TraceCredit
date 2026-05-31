@@ -1,0 +1,52 @@
+{
+  "poolStats": {
+    "tvl":           "50000000000000",
+    "sharesOutstanding": "48000000000000",
+    "netLpApyBps":   476,
+    "utilisationBps": 4000,
+    "kinkBps":       7000,
+    "capBps":        9000,
+    "sharePrice":    "1041700",
+    "sharePriceDeltaBps": 417
+  },
+  "lpPosition": {
+    "shares":        "10000000000000",
+    "usdcValue":     "10417000000",
+    "poolShareBps":  2080,
+    "netApyBps":     476,
+    "dailyYield":    "1360000",
+    "annualYield":   "495850000",
+    "pendingYield":  "23040000",
+    "totalDeposited":"10000000000",
+    "redemptionValue":"10417000000"
+  },
+  "apyBreakdown": {
+    "grossApyBps":   560,
+    "reserveCutBps": 1500,
+    "netLpApyBps":   476
+  },
+  "poolUtilisation": {
+    "currentUtilBps":   4000,
+    "currentBorrowAprBps": 1400,
+    "kinkBps":          7000,
+    "capBps":           9000,
+    "grossPoolApyBps":  560,
+    "reserveFactorBps": 1500,
+    "reserveBalance":   "5000000000000",
+    "atKinkWarningBps": 8000
+  },
+  "transactions": [
+    { "id":"t1", "type":"deposit",    "wallet":"0xabc1…44f2", "amount":"5000000000", "date":"2026-05-10" },
+    { "id":"t2", "type":"deposit",    "wallet":"0xde22…91bc", "amount":"5000000000", "date":"2026-04-28" },
+    { "id":"t3", "type":"withdrawal", "wallet":"0x77f3…1a44", "amount":"2000000000", "date":"2026-04-15" }
+  ],
+  "yieldChart7d": [
+    { "date":"2026-05-17", "dailyYield":"1180000",  "borrowVolume":"3400000000000" },
+    { "date":"2026-05-18", "dailyYield":"1320000",  "borrowVolume":"5100000000000" },
+    { "date":"2026-05-19", "dailyYield":"1150000",  "borrowVolume":"3800000000000" },
+    { "date":"2026-05-20", "dailyYield":"1410000",  "borrowVolume":"5500000000000" },
+    { "date":"2026-05-21", "dailyYield":"1280000",  "borrowVolume":"4200000000000" },
+    { "date":"2026-05-22", "dailyYield":"1190000",  "borrowVolume":"3000000000000" },
+    { "date":"2026-05-23", "dailyYield":"1360000",  "borrowVolume":"3800000000000" }
+  ]
+}

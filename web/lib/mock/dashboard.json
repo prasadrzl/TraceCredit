@@ -1,0 +1,101 @@
+{
+  "protocolStats": {
+    "tvl": "12420000000000",
+    "totalBorrowVolume": "8210000000000",
+    "totalRepayVolume": "6800000000000",
+    "activeBorrowers": 1247,
+    "totalBorrowers": 1247,
+    "utilisationBps": 6600,
+    "averageScore": 687
+  },
+  "vaultStats": {
+    "totalAssets": "12420000000000",
+    "totalShares": "11950000000000",
+    "outstandingLoans": "8210000000000",
+    "utilisationBps": 6600,
+    "sharePrice": "1039000",
+    "reserveBalance": "420000000000",
+    "maxUtilisationBps": 9000
+  },
+  "apyStats": {
+    "utilisationBps": 6600,
+    "grossApyBps": 840,
+    "netLpApyBps": 714,
+    "reserveFactorBps": 1500
+  },
+  "volume7d": [
+    { "date": "2026-05-17", "borrowVolume": "737000000000", "repayVolume": "492000000000" },
+    { "date": "2026-05-18", "borrowVolume": "760000000000", "repayVolume": "540000000000" },
+    { "date": "2026-05-19", "borrowVolume": "690000000000", "repayVolume": "480000000000" },
+    { "date": "2026-05-20", "borrowVolume": "820000000000", "repayVolume": "510000000000" },
+    { "date": "2026-05-21", "borrowVolume": "780000000000", "repayVolume": "530000000000" },
+    { "date": "2026-05-22", "borrowVolume": "760000000000", "repayVolume": "600000000000" },
+    { "date": "2026-05-23", "borrowVolume": "810000000000", "repayVolume": "680000000000" }
+  ],
+  "volume30d": [
+    { "date": "2026-04-24", "borrowVolume": "620000000000", "repayVolume": "410000000000" },
+    { "date": "2026-04-25", "borrowVolume": "680000000000", "repayVolume": "450000000000" },
+    { "date": "2026-04-26", "borrowVolume": "590000000000", "repayVolume": "420000000000" },
+    { "date": "2026-04-27", "borrowVolume": "710000000000", "repayVolume": "490000000000" },
+    { "date": "2026-04-28", "borrowVolume": "650000000000", "repayVolume": "460000000000" },
+    { "date": "2026-04-29", "borrowVolume": "580000000000", "repayVolume": "390000000000" },
+    { "date": "2026-04-30", "borrowVolume": "640000000000", "repayVolume": "430000000000" },
+    { "date": "2026-05-01", "borrowVolume": "720000000000", "repayVolume": "500000000000" },
+    { "date": "2026-05-02", "borrowVolume": "690000000000", "repayVolume": "470000000000" },
+    { "date": "2026-05-03", "borrowVolume": "750000000000", "repayVolume": "510000000000" },
+    { "date": "2026-05-04", "borrowVolume": "610000000000", "repayVolume": "440000000000" },
+    { "date": "2026-05-05", "borrowVolume": "670000000000", "repayVolume": "460000000000" },
+    { "date": "2026-05-06", "borrowVolume": "730000000000", "repayVolume": "490000000000" },
+    { "date": "2026-05-07", "borrowVolume": "700000000000", "repayVolume": "480000000000" },
+    { "date": "2026-05-08", "borrowVolume": "660000000000", "repayVolume": "450000000000" },
+    { "date": "2026-05-09", "borrowVolume": "780000000000", "repayVolume": "530000000000" },
+    { "date": "2026-05-10", "borrowVolume": "740000000000", "repayVolume": "510000000000" },
+    { "date": "2026-05-11", "borrowVolume": "690000000000", "repayVolume": "470000000000" },
+    { "date": "2026-05-12", "borrowVolume": "720000000000", "repayVolume": "490000000000" },
+    { "date": "2026-05-13", "borrowVolume": "760000000000", "repayVolume": "520000000000" },
+    { "date": "2026-05-14", "borrowVolume": "710000000000", "repayVolume": "480000000000" },
+    { "date": "2026-05-15", "borrowVolume": "740000000000", "repayVolume": "500000000000" },
+    { "date": "2026-05-16", "borrowVolume": "770000000000", "repayVolume": "520000000000" },
+    { "date": "2026-05-17", "borrowVolume": "737000000000", "repayVolume": "492000000000" },
+    { "date": "2026-05-18", "borrowVolume": "760000000000", "repayVolume": "540000000000" },
+    { "date": "2026-05-19", "borrowVolume": "690000000000", "repayVolume": "480000000000" },
+    { "date": "2026-05-20", "borrowVolume": "820000000000", "repayVolume": "510000000000" },
+    { "date": "2026-05-21", "borrowVolume": "780000000000", "repayVolume": "530000000000" },
+    { "date": "2026-05-22", "borrowVolume": "760000000000", "repayVolume": "600000000000" },
+    { "date": "2026-05-23", "borrowVolume": "810000000000", "repayVolume": "680000000000" }
+  ],
+  "atRiskPositions": [
+    { "borrower": "0x9b21...b7d2", "tier": "Platinum", "debt": "42500000000", "ltv": 83.0, "threshold": 85, "health": 1.03 },
+    { "borrower": "0x4f1a...7f8a", "tier": "Gold",     "debt": "18200000000", "ltv": 79.8, "threshold": 82, "health": 1.07 },
+    { "borrower": "0x7c3d...1c2d", "tier": "Silver",   "debt": "9500000000",  "ltv": 80.5, "threshold": 80, "health": 0.99 },
+    { "borrower": "0xa1b2...a9b1", "tier": "Gold",     "debt": "31000000000", "ltv": 77.9, "threshold": 82, "health": 1.12 },
+    { "borrower": "0xe5f6...e4f5", "tier": "Bronze",   "debt": "4200000000",  "ltv": 75.0, "threshold": 75, "health": 0.97 }
+  ],
+  "recentActivity": [
+    { "id": "1", "type": "repaid",      "wallet": "0xf906...dfe1", "tier": "Bronze",   "amount": "33791000000", "ts": 0 },
+    { "id": "2", "type": "borrow",      "wallet": "0x5e6e...b272", "tier": "Silver",   "amount": "28060000000", "ts": -6 },
+    { "id": "3", "type": "repaid",      "wallet": "0x8ddd...0606", "tier": "Silver",   "amount": "42992000000", "ts": -13 },
+    { "id": "4", "type": "repaid",      "wallet": "0x4014...bd81", "tier": "Platinum", "amount": "31553000000", "ts": -22 },
+    { "id": "5", "type": "repaid",      "wallet": "0xcdbd...bcff", "tier": "Gold",     "amount": "49511000000", "ts": -26 },
+    { "id": "6", "type": "repaid",      "wallet": "0x789c...2b50", "tier": "Bronze",   "amount": "34830000000", "ts": -29 },
+    { "id": "7", "type": "repaid",      "wallet": "0x1587...dbef", "tier": "Platinum", "amount": "49099000000", "ts": -36 },
+    { "id": "8", "type": "repaid",      "wallet": "0x57ad...1b64", "tier": "Gold",     "amount": "13597000000", "ts": -40 },
+    { "id": "9", "type": "borrow",      "wallet": "0x663d...01d6", "tier": "Platinum", "amount": "58688000000", "ts": -48 },
+    { "id": "10","type": "borrow",      "wallet": "0x512d...87ab", "tier": "Gold",     "amount": "79289000000", "ts": -54 }
+  ],
+  "borrowersByTier": {
+    "Diamond":  32,
+    "Platinum": 156,
+    "Gold":     487,
+    "Silver":   412,
+    "Bronze":   160
+  },
+  "protocolHealth": [
+    { "name": "Oracle (Pyth)",       "status": "operational" },
+    { "name": "Liquidation engine",  "status": "operational" },
+    { "name": "Score updates",       "status": "operational" },
+    { "name": "WebSocket feed",      "status": "operational" }
+  ],
+  "lastBlock": { "number": 21418302, "ageSeconds": 4 },
+  "usdcPrice": { "price": "99990000", "priceUsd": 0.9999, "decimals": 8, "roundId": "18446744073709553729", "updatedAt": 1716300000 }
+}
