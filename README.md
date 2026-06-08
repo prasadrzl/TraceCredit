@@ -6,29 +6,9 @@ A full-stack DeFi lending protocol on **Optimism Sepolia** where borrowers acces
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          USER (Browser)                             │
-│                     Next.js 14 · wagmi · viem                       │
-└────────────┬────────────────────────┬────────────────────────────────┘
-             │  REST + WebSocket       │  Direct contract calls
-             ▼                         ▼
-┌────────────────────────┐   ┌─────────────────────────────────────────┐
-│   NestJS API (3001)    │   │        Optimism Sepolia                  │
-│   13 REST modules      │   │                                          │
-│   Socket.io gateway    │   │  LendingPool (ERC-4626)                  │
-│   BullMQ keeper bot    │   │  ScoreEngine + ReputationSBT (ERC-5192)  │
-│   PostgreSQL + Redis   │   │  LiquidationManager                      │
-└────────┬───────────────┘   │  AttestationBridge                       │
-         │                   │  CreditLineManager                        │
-         │  GraphQL          │  InterestAccrualEngine                   │
-         ▼                   └──────────────────┬──────────────────────┘
-┌────────────────────────┐                      │  Events indexed
-│   The Graph Subgraph   │◄─────────────────────┘
-│   Loans · Liquidations │
-│   Score history        │
-└────────────────────────┘
-```
+<img width="2904" height="2005" alt="image" src="https://github.com/user-attachments/assets/dc7d2a16-6239-43c6-85b3-939dc10a6ac0" />
+
+
 
 ---
 
