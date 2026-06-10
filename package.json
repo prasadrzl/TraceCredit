@@ -1,7 +1,10 @@
 {
   "name": "tracecredit",
   "private": true,
-  "workspaces": ["api", "web"],
+  "workspaces": [
+    "api",
+    "web"
+  ],
   "scripts": {
     "dev:web": "yarn workspace web dev",
     "dev:api": "yarn workspace api start:dev",

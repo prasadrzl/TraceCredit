@@ -6,29 +6,7 @@ A full-stack DeFi lending protocol on **Optimism Sepolia** where borrowers acces
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                          USER (Browser)                             │
-│                     Next.js 14 · wagmi · viem                       │
-└────────────┬────────────────────────┬────────────────────────────────┘
-             │  REST + WebSocket       │  Direct contract calls
-             ▼                         ▼
-┌────────────────────────┐   ┌─────────────────────────────────────────┐
-│   NestJS API (3001)    │   │        Optimism Sepolia                  │
-│   13 REST modules      │   │                                          │
-│   Socket.io gateway    │   │  LendingPool (ERC-4626)                  │
-│   BullMQ keeper bot    │   │  ScoreEngine + ReputationSBT (ERC-5192)  │
-│   PostgreSQL + Redis   │   │  LiquidationManager                      │
-└────────┬───────────────┘   │  AttestationBridge                       │
-         │                   │  CreditLineManager                        │
-         │  GraphQL          │  InterestAccrualEngine                   │
-         ▼                   └──────────────────┬──────────────────────┘
-┌────────────────────────┐                      │  Events indexed
-│   The Graph Subgraph   │◄─────────────────────┘
-│   Loans · Liquidations │
-│   Score history        │
-└────────────────────────┘
-```
+![alt text](image.png)
 
 ---
 
@@ -76,25 +54,25 @@ contracts/src/
 ### Tier System
 
 | Tier     | Credit Limit | Interest APY | Lockup  |
-|----------|-------------|--------------|---------|
-| Bronze   | $0          | 18%          | 90 days |
-| Silver   | $500        | 18%          | 90 days |
-| Gold     | $5,000      | 14%          | 60 days |
-| Platinum | $25,000     | 10%          | 30 days |
-| Diamond  | $100,000    | 7%           | 14 days |
+| -------- | ------------ | ------------ | ------- |
+| Bronze   | $0           | 18%          | 90 days |
+| Silver   | $500         | 18%          | 90 days |
+| Gold     | $5,000       | 14%          | 60 days |
+| Platinum | $25,000      | 10%          | 30 days |
+| Diamond  | $100,000     | 7%           | 14 days |
 
 ### Score Signals
 
-| Signal                  | Delta   |
-|-------------------------|---------|
-| On-time repayment       | +40 pts |
-| Cross-protocol signal   | +30 pts |
-| Wallet age              | +20 pts |
-| SBT staking             | +15 pts |
-| DAO governance vote     | +10 pts |
-| Late repayment          | -50 pts |
-| Default / liquidation   | -200 pts|
-| Inactivity decay        | -1 pt / 30 days (after 90-day grace) |
+| Signal                | Delta                                |
+| --------------------- | ------------------------------------ |
+| On-time repayment     | +40 pts                              |
+| Cross-protocol signal | +30 pts                              |
+| Wallet age            | +20 pts                              |
+| SBT staking           | +15 pts                              |
+| DAO governance vote   | +10 pts                              |
+| Late repayment        | -50 pts                              |
+| Default / liquidation | -200 pts                             |
+| Inactivity decay      | -1 pt / 30 days (after 90-day grace) |
 
 ### Running Tests
 
@@ -137,16 +115,16 @@ api/src/
 
 ### Database Entities
 
-| Entity              | Purpose                                      |
-|---------------------|----------------------------------------------|
-| BorrowerProfile     | Wallet score, tier, credit limits, SBT state |
-| LoanSnapshot        | Loan state snapshots (active/repaid/defaulted)|
-| ScoreEvent          | Per-signal event log with attestation payload |
-| ScoreHistory        | Score change history with source tracking    |
-| LpPosition          | LP shares, deposited value, yield earned     |
-| LiquidationRecord   | Recovery amounts, write-off, tx hash         |
-| PoolStat            | Utilisation, APY, TVL snapshots              |
-| PriceSnapshot       | Chainlink USDC/USD feed history              |
+| Entity            | Purpose                                        |
+| ----------------- | ---------------------------------------------- |
+| BorrowerProfile   | Wallet score, tier, credit limits, SBT state   |
+| LoanSnapshot      | Loan state snapshots (active/repaid/defaulted) |
+| ScoreEvent        | Per-signal event log with attestation payload  |
+| ScoreHistory      | Score change history with source tracking      |
+| LpPosition        | LP shares, deposited value, yield earned       |
+| LiquidationRecord | Recovery amounts, write-off, tx hash           |
+| PoolStat          | Utilisation, APY, TVL snapshots                |
+| PriceSnapshot     | Chainlink USDC/USD feed history                |
 
 ### WebSocket Events
 
@@ -168,6 +146,7 @@ Subscribe per wallet:
 ### Liquidation Keeper Bot
 
 Runs every **60 seconds** via BullMQ repeatable job:
+
 ```
 Scan defaulted loans (grace period expired)
         ↓
@@ -252,11 +231,11 @@ Mock fallback (lib/mock/*.json)    → local JSON (always works)
 
 ### State Management
 
-| Store               | Holds                                         |
-|---------------------|-----------------------------------------------|
-| wallet-store        | Connected wallet address and chain ID         |
-| activity-store      | Live feed items (max 50) from WebSocket       |
-| tx-modal-store      | Active transaction modal and its payload      |
+| Store          | Holds                                    |
+| -------------- | ---------------------------------------- |
+| wallet-store   | Connected wallet address and chain ID    |
+| activity-store | Live feed items (max 50) from WebSocket  |
+| tx-modal-store | Active transaction modal and its payload |
 
 ### Environment Variables
 
@@ -326,19 +305,19 @@ yarn lint           # lint all workspaces
 
 ## Tech Stack
 
-| Layer        | Technology                                              |
-|--------------|---------------------------------------------------------|
-| Contracts    | Solidity 0.8.24 · Foundry · OpenZeppelin · ERC-4626 · ERC-5192 |
-| Network      | Optimism Sepolia (Chain ID: 11155420)                   |
-| Indexing     | The Graph Protocol · GraphQL                           |
-| Backend      | NestJS · TypeScript · TypeORM · PostgreSQL              |
-| Queues       | BullMQ · Redis                                          |
-| Real-time    | Socket.io WebSocket gateway                             |
-| Frontend     | Next.js 14 · React 18 · TypeScript · Tailwind CSS      |
-| Blockchain   | wagmi v2 · viem v2                                      |
-| State        | TanStack React Query v5 · Zustand                       |
-| UI           | shadcn/ui · Radix UI · Recharts · Lucide               |
-| Wallets      | MetaMask · WalletConnect · Coinbase Wallet             |
+| Layer      | Technology                                                     |
+| ---------- | -------------------------------------------------------------- |
+| Contracts  | Solidity 0.8.24 · Foundry · OpenZeppelin · ERC-4626 · ERC-5192 |
+| Network    | Optimism Sepolia (Chain ID: 11155420)                          |
+| Indexing   | The Graph Protocol · GraphQL                                   |
+| Backend    | NestJS · TypeScript · TypeORM · PostgreSQL                     |
+| Queues     | BullMQ · Redis                                                 |
+| Real-time  | Socket.io WebSocket gateway                                    |
+| Frontend   | Next.js 14 · React 18 · TypeScript · Tailwind CSS              |
+| Blockchain | wagmi v2 · viem v2                                             |
+| State      | TanStack React Query v5 · Zustand                              |
+| UI         | shadcn/ui · Radix UI · Recharts · Lucide                       |
+| Wallets    | MetaMask · WalletConnect · Coinbase Wallet                     |
 
 ---
 
