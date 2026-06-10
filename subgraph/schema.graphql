@@ -1,0 +1,86 @@
+type Loan @entity {
+  id: ID!                      # loanId as string
+  loanId: BigInt!
+  borrower: Bytes!
+  principal: BigInt!
+  rateBps: BigInt!
+  dueTime: BigInt!
+  status: String!              # active | repaid | grace_period | defaulted | written_off
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  repayments: [Repayment!]! @derivedFrom(field: "loan")
+  liquidation: Liquidation @derivedFrom(field: "loan")
+}
+
+type Repayment @entity {
+  id: ID!                      # txHash-logIndex
+  loan: Loan!
+  borrower: Bytes!
+  amount: BigInt!
+  fullRepayment: Boolean!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type Liquidation @entity {
+  id: ID!                      # loanId as string
+  loan: Loan!
+  borrower: Bytes!
+  amount: BigInt!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type ScoreUpdate @entity {
+  id: ID!                      # txHash-logIndex
+  wallet: Bytes!
+  newScore: Int!
+  delta: Int!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type SignalEvent @entity {
+  id: ID!                      # txHash-logIndex
+  wallet: Bytes!
+  signal: Int!                 # SignalType enum value from contract
+  delta: Int!
+  txHash: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+}
+
+type SBTHolder @entity {
+  id: ID!                      # wallet address
+  wallet: Bytes!
+  tokenId: BigInt!
+  active: Boolean!
+  mintedAt: BigInt!
+  burnedAt: BigInt
+}
+
+type Borrower @entity {
+  id: ID!                      # wallet address
+  wallet: Bytes!
+  totalBorrowed: BigInt!
+  totalRepaid: BigInt!
+  activeLoans: Int!
+  totalLoans: Int!
+  defaults: Int!
+  firstLoanAt: BigInt
+  lastActivityAt: BigInt
+}
+
+type ProtocolStats @entity {
+  id: ID!                      # always "global"
+  totalBorrowed: BigInt!
+  totalRepaid: BigInt!
+  totalLiquidated: BigInt!
+  activeLoansCount: BigInt!
+  uniqueBorrowers: BigInt!
+  lastUpdatedBlock: BigInt!
+}
