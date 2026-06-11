@@ -11,19 +11,8 @@ import {
 import { LiquidationService } from './liquidation.service';
 import { ParseAddressPipe } from '../common/pipes/parse-address.pipe';
 import { ApiWalletParam } from '../common/decorators/api-wallet-param.decorator';
-import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import { LiquidationRecordDto, LiquidationStatsDto } from './liquidation.dto';
+import { LiquidationQueryDto, LiquidationRecordDto, LiquidationStatsDto } from './liquidation.dto';
 import { ApiErrorResponse } from '../common/dto/api-response.dto';
-
-class LiquidationQueryDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 50;
-}
 
 @ApiTags('Liquidation')
 @ApiExtraModels(LiquidationRecordDto, LiquidationStatsDto)

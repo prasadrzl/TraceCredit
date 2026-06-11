@@ -21,15 +21,19 @@ async function bootstrap(): Promise<void> {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: false,
+      forbidNonWhitelisted: true,
       transform: true,
       transformOptions: { enableImplicitConversion: true },
     }),
   );
 
   /** CORS */
+  const nodeEnv = config.get<string>('nodeEnv');
+  const corsOrigins = config.get<string[]>('corsOrigins') ?? [];
   app.enableCors({
-    origin: config.get<string>('nodeEnv') === 'production' ? false : '*',
+    origin: nodeEnv === 'production'
+      ? (corsOrigins.length > 0 ? corsOrigins : false)
+      : '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });

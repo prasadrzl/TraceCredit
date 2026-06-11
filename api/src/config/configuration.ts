@@ -34,6 +34,12 @@ export default () => ({
 
   subgraphUrl: process.env.SUBGRAPH_URL ?? '',
 
+  /** Comma-separated allowed CORS origins for production, e.g. "https://app.tracecredit.io" */
+  corsOrigins: (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean),
+
   liquidationBot: {
     privateKey: process.env.LIQUIDATION_BOT_PRIVATE_KEY ?? '',
   },
