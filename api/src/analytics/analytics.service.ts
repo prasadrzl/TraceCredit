@@ -76,18 +76,45 @@ export class AnalyticsService {
     return result;
   }
 
-  async getVolumeStats(days = 7): Promise<{ date: string; borrowVolume: string; repayVolume: string }[]> {
-    /** The Graph would power this — returning a stub that callers can extend with
-     *  proper time-bucketed queries once the subgraph schema is deployed. */
-    const today = new Date();
-    return Array.from({ length: days }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(d.getDate() - (days - 1 - i));
-      return {
-        date: d.toISOString().split('T')[0],
-        borrowVolume: '0',
-        repayVolume: '0',
-      };
-    });
+  async getVolumeStats(
+    days = 7,
+  ): Promise<{ date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string }[]> {
+    const cacheKey = `analytics:volume:${days}`;
+    const cached = await this.cache.get<
+      { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string }[]
+    >(cacheKey);
+    if (cached) return cached;
+
+    const subgraphData = await this.graph.getDailyVolume(days);
+
+    let result: { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string }[];
+
+    if (subgraphData.length > 0) {
+      // Use real subgraph data, sorted oldest-first so the response is chronological.
+      result = [...subgraphData]
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map((r) => ({
+          date: r.date,
+          borrowVolume: r.borrowVolume,
+          repayVolume: r.repayVolume,
+          liquidationVolume: r.liquidationVolume,
+        }));
+    } else {
+      // Subgraph not yet deployed or unavailable — return zero-padded calendar.
+      const today = new Date();
+      result = Array.from({ length: days }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - (days - 1 - i));
+        return {
+          date: d.toISOString().split('T')[0],
+          borrowVolume: '0',
+          repayVolume: '0',
+          liquidationVolume: '0',
+        };
+      });
+    }
+
+    await this.cache.set(cacheKey, result, ANALYTICS_CACHE_TTL_MS);
+    return result;
   }
 }
