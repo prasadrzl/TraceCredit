@@ -220,6 +220,16 @@ export const LIQUIDATION_MANAGER_ABI = [
     inputs: [],
     outputs: [{ name: '', type: 'uint256' }],
   },
+  {
+    name: 'LoanLiquidated',
+    type: 'event',
+    inputs: [
+      { name: 'loanId', type: 'uint256', indexed: true },
+      { name: 'borrower', type: 'address', indexed: true },
+      { name: 'recovered', type: 'uint256', indexed: false },
+      { name: 'writtenOff', type: 'uint256', indexed: false },
+    ],
+  },
 ] as const;
 
 export const ATTESTATION_BRIDGE_ABI = [
