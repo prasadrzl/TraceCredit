@@ -1,12 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { LiquidationRepository } from './liquidation.repository';
 import { GraphService } from '../graph/graph.service';
 import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 
+const STATS_CACHE_TTL_MS = 60_000; // 1 min
+
 export interface LiquidationStats {
-  totalLiquidations: number;
+  total: number;
   totalRecovered: string;
   totalWrittenOff: string;
+  last24hCount: number;
 }
 
 @Injectable()
@@ -14,6 +19,7 @@ export class LiquidationService {
   constructor(
     private readonly repo: LiquidationRepository,
     private readonly graph: GraphService,
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
   async getRecentLiquidations(limit = 50): Promise<LiquidationRecord[]> {
@@ -25,14 +31,13 @@ export class LiquidationService {
   }
 
   async getLiquidationStats(): Promise<LiquidationStats> {
-    const records = await this.repo.findAll(10_000, 0);
-    const totalRecovered = records.reduce((acc, r) => acc + BigInt(r.recoveredAmount), 0n);
-    const totalWrittenOff = records.reduce((acc, r) => acc + BigInt(r.writtenOffAmount), 0n);
-    return {
-      totalLiquidations: records.length,
-      totalRecovered: totalRecovered.toString(),
-      totalWrittenOff: totalWrittenOff.toString(),
-    };
+    const cacheKey = 'liquidation:stats';
+    const cached = await this.cache.get<LiquidationStats>(cacheKey);
+    if (cached) return cached;
+
+    const stats = await this.repo.getStats();
+    await this.cache.set(cacheKey, stats, STATS_CACHE_TTL_MS);
+    return stats;
   }
 
   async recordLiquidation(data: {
