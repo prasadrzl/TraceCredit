@@ -11,6 +11,6 @@ import { ScoreEvent } from '../database/entities/score-event.entity';
   imports: [TypeOrmModule.forFeature([ScoreHistory, BorrowerProfile, ScoreEvent])],
   providers: [ScoreService, ScoreRepository],
   controllers: [ScoreController],
-  exports: [ScoreService],
+  exports: [ScoreService, ScoreRepository],
 })
 export class ScoreModule {}

@@ -1,6 +1,9 @@
 import { Module, Global } from '@nestjs/common';
 import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ScoreModule } from '../score/score.module';
+import { PriceModule } from '../price/price.module';
+import { ScoreSyncProcessor, PriceFetchProcessor } from './queue.processor';
 
 export const QUEUE_LIQUIDATION = 'liquidation';
 export const QUEUE_SCORE_SYNC = 'score-sync';
@@ -34,7 +37,10 @@ export const QUEUE_PRICE_FETCH = 'price-fetch';
       { name: QUEUE_SCORE_SYNC },
       { name: QUEUE_PRICE_FETCH },
     ),
+    ScoreModule,
+    PriceModule,
   ],
+  providers: [ScoreSyncProcessor, PriceFetchProcessor],
   exports: [BullModule],
 })
 export class QueueModule {}
