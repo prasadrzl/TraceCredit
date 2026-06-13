@@ -22,7 +22,7 @@ import { PoolStat }          from '../entities/pool-stat.entity';
 import { PriceSnapshot }     from '../entities/price-snapshot.entity';
 
 // ─── User wallet ─────────────────────────────────────────────────────────────
-const MY_WALLET = '0x0de0b61e8815791cE462B8182A10e83D569FC13C';
+const MY_WALLET = '0x0de0b61e8815791ce462b8182a10e83d569fc13c';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function daysAgo(n: number): Date {
@@ -301,16 +301,37 @@ async function seedLiquidationRecords() {
   const repo = AppDataSource.getRepository(LiquidationRecord);
   const rows: Partial<LiquidationRecord>[] = [];
 
+  // ── MY_WALLET: 5 liquidation records ──
+  const myLiqs = [
+    { loanId: 24, recovered: 1_800_000_000_000, writtenOff: 200_000_000_000, daysAgo_: 95 },
+    { loanId: 31, recovered: 1_100_000_000_000, writtenOff: 0,               daysAgo_: 70 },
+    { loanId: 35, recovered:   750_000_000_000, writtenOff: 50_000_000_000,  daysAgo_: 52 },
+    { loanId: 38, recovered: 2_300_000_000_000, writtenOff: 0,               daysAgo_: 30 },
+    { loanId: 40, recovered: 3_200_000_000_000, writtenOff: 300_000_000_000, daysAgo_: 12 },
+  ];
+
+  for (let i = 0; i < myLiqs.length; i++) {
+    const l = myLiqs[i];
+    rows.push({
+      loanId: l.loanId.toString(),
+      borrower: MY_WALLET,
+      recoveredAmount: l.recovered.toString(),
+      writtenOffAmount: l.writtenOff.toString(),
+      txHash: fakeTx(5000 + i),
+      blockNumber: (18_000_000 + l.loanId * 5000).toString(),
+      liquidatedAt: daysAgo(l.daysAgo_),
+    });
+  }
+
   // ── 8 records matching frontend mock ──
   const mockLiqs = [
-    { loanId: 28, borrower: fakeWallet(11), recovered: 1_800_000_000_000, writtenOff: 0,             daysAgo_: 19 },
-    { loanId: 24, borrower: fakeWallet(12), recovered: 1_200_000_000_000, writtenOff: 300_000_000_000, daysAgo_: 26 },
-    { loanId: 21, borrower: fakeWallet(13), recovered: 2_200_000_000_000, writtenOff: 0,             daysAgo_: 35 },
+    { loanId: 28, borrower: fakeWallet(11), recovered: 1_800_000_000_000, writtenOff: 0,               daysAgo_: 19 },
+    { loanId: 21, borrower: fakeWallet(13), recovered: 2_200_000_000_000, writtenOff: 0,               daysAgo_: 35 },
     { loanId: 18, borrower: fakeWallet(14), recovered: 1_240_000_000_000, writtenOff: 460_000_000_000, daysAgo_: 44 },
-    { loanId: 16, borrower: fakeWallet(15), recovered: 800_000_000_000,   writtenOff: 0,             daysAgo_: 52 },
+    { loanId: 16, borrower: fakeWallet(15), recovered: 800_000_000_000,   writtenOff: 0,               daysAgo_: 52 },
     { loanId: 14, borrower: fakeWallet(16), recovered: 880_000_000_000,   writtenOff: 1_020_000_000_000, daysAgo_: 60 },
     { loanId: 11, borrower: fakeWallet(17), recovered: 880_000_000_000,   writtenOff: 220_000_000_000, daysAgo_: 70 },
-    { loanId: 7,  borrower: fakeWallet(18), recovered: 1_000_000_000_000, writtenOff: 0,             daysAgo_: 85 },
+    { loanId: 7,  borrower: fakeWallet(18), recovered: 1_000_000_000_000, writtenOff: 0,               daysAgo_: 85 },
   ];
 
   for (const l of mockLiqs) {
@@ -325,8 +346,8 @@ async function seedLiquidationRecords() {
     });
   }
 
-  // ── 92 more generated liquidations ──
-  for (let i = 0; i < 92; i++) {
+  // ── 88 more generated liquidations ──
+  for (let i = 0; i < 88; i++) {
     const principal  = rnd(500, 5_000) * 1_000_000_000;
     const recoveryPct = rnd(40, 100) / 100;
     const recovered  = Math.round(principal * recoveryPct);
@@ -412,12 +433,12 @@ async function seedScoreEvents() {
     { signalType: 'ON_TIME_REPAYMENT',        sub: 'On-time repayment',    source: 'Loan #38',            sourceType: 'Repayment',      delta: 22,  scoreAfter: 650, daysAgo_: 9,  block: '18472481', txSeed: 101 },
     { signalType: 'DAO_VOTE',                  sub: 'DAO vote',             source: 'Snapshot prop #47',   sourceType: 'Governance',     delta: 2,   scoreAfter: 628, daysAgo_: 12, block: '18445118', txSeed: 102 },
     { signalType: 'CROSS_PROTOCOL_REPAYMENT',  sub: 'Cross-protocol repay', source: 'EAS · Aave V3',       sourceType: 'Cross-protocol', delta: 12,  scoreAfter: 626, daysAgo_: 15, block: '18417682', txSeed: 103,
-      attestationUid: '0xcc7a08e2456b0000000000000000000000000000000000000000000000000045b0',
+      attestationUid: '0xcc7a08e2456b000000000000000000000000000000000000000000000000045b',
       attestationPayload: { schema: 'bytes32 loanId, uint256 amount', attester: '0x9aE2_3F7C (AaveBridge)', recipient: MY_WALLET, revocable: false, quorum: 5, maxQuorum: 5, rawPayload: { protocol: 'Aave V3', amount: '12000000', chainId: 8453 } },
     },
     { signalType: 'ON_TIME_REPAYMENT',         sub: 'On-time repayment',    source: 'Loan #36',            sourceType: 'Repayment',      delta: 18,  scoreAfter: 614, daysAgo_: 18, block: '18389344', txSeed: 104 },
     { signalType: 'LATE_REPAYMENT',            sub: 'Late repayment',       source: 'Loan #31',            sourceType: 'Penalty',        delta: -50, scoreAfter: 596, daysAgo_: 21, block: '18361218', txSeed: 105,
-      attestationUid: '0xcc7a08e2_45b0000000000000000000000000000000000000000000000000000000',
+      attestationUid: '0xcc7a08e245b00000000000000000000000000000000000000000000000000000',
       attestationPayload: { schema: 'bytes32 loanId, uint256 daysLate', uid: '0xcc7a08e2_45b0', attester: '0x9a9aE2_3F7C (LoanManager)', recipient: MY_WALLET, evidenceHash: '0x71ee0d_14a2', revocable: false, quorum: 5, maxQuorum: 5, rawPayload: { loanId: '0x31', daysLate: 3, graceUsed: true } },
     },
     { signalType: 'ATTESTATION_RECEIVED',      sub: 'Attestation received', source: 'Gitcoin Passport',    sourceType: 'Identity',       delta: 6,   scoreAfter: 646, daysAgo_: 24, block: '18330081', txSeed: 106 },
