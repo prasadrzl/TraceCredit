@@ -1,6 +1,6 @@
 import { Process, Processor } from '@nestjs/bull';
 import { Job } from 'bull';
-import { QUEUE_SCORE_SYNC, QUEUE_PRICE_FETCH } from './queue.module';
+import { QUEUE_SCORE_SYNC, QUEUE_PRICE_FETCH } from './queue.constants';
 import { AppLogger } from '../logger/logger.service';
 import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
@@ -45,7 +45,7 @@ export class ScoreSyncProcessor {
         this.scoreRepo.getLatest(wallet),
       ]);
 
-      const score = Number(rawScore as bigint);
+      const score = Number(rawScore as unknown as bigint);
       const previousScore = previousRecord?.score ?? 0;
 
       // Only persist if the score actually changed to avoid redundant rows.

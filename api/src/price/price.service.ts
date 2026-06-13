@@ -38,35 +38,55 @@ export class PriceService {
 
     const feed = this.contracts.addr.chainlinkUsdcUsd;
 
-    const [roundData, decimals] = await Promise.all([
-      this.chain.publicClient.readContract({
-        address: feed,
-        abi: CHAINLINK_AGGREGATOR_ABI,
-        functionName: 'latestRoundData',
-      }),
-      this.chain.publicClient.readContract({
-        address: feed,
-        abi: CHAINLINK_AGGREGATOR_ABI,
-        functionName: 'decimals',
-      }),
-    ]);
+    try {
+      const [roundData, decimals] = await Promise.all([
+        this.chain.publicClient.readContract({
+          address: feed,
+          abi: CHAINLINK_AGGREGATOR_ABI,
+          functionName: 'latestRoundData',
+        }),
+        this.chain.publicClient.readContract({
+          address: feed,
+          abi: CHAINLINK_AGGREGATOR_ABI,
+          functionName: 'decimals',
+        }),
+      ]);
 
-    const [roundId, answer, , updatedAt] = roundData as [bigint, bigint, bigint, bigint, bigint];
-    const dec = decimals as number;
-    const priceUsd = (Number(answer) / 10 ** dec).toFixed(8);
+      const [roundId, answer, , updatedAt] = roundData as [bigint, bigint, bigint, bigint, bigint];
+      const dec = decimals as number;
+      const priceUsd = (Number(answer) / 10 ** dec).toFixed(8);
+
+      const result: UsdcPrice = {
+        asset: 'USDC',
+        priceUsd,
+        rawAnswer: answer.toString(),
+        roundId: roundId.toString(),
+        updatedAt: Number(updatedAt),
+        decimals: dec,
+      };
+
+      await this.cache.set(PRICE_CACHE_KEY, result, PRICE_TTL_MS);
+      await this.persistSnapshot(result);
+      return result;
+    } catch (err: any) {
+      this.logger.warn(`getUsdcPrice on-chain failed, falling back to DB: ${err.message}`, 'PriceService');
+    }
+
+    const snap = await this.snapshotRepo.findOne({
+      where: { asset: 'USDC' },
+      order: { recordedAt: 'DESC' },
+    });
 
     const result: UsdcPrice = {
       asset: 'USDC',
-      priceUsd,
-      rawAnswer: answer.toString(),
-      roundId: roundId.toString(),
-      updatedAt: Number(updatedAt),
-      decimals: dec,
+      priceUsd: snap?.priceUsd ?? '1.00000000',
+      rawAnswer: snap?.rawAnswer ?? '100000000',
+      roundId: snap?.roundId ?? '0',
+      updatedAt: snap ? Math.floor(new Date(snap.recordedAt).getTime() / 1000) : 0,
+      decimals: 8,
     };
 
     await this.cache.set(PRICE_CACHE_KEY, result, PRICE_TTL_MS);
-    await this.persistSnapshot(result);
-
     return result;
   }
 

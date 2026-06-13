@@ -4,10 +4,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScoreModule } from '../score/score.module';
 import { PriceModule } from '../price/price.module';
 import { ScoreSyncProcessor, PriceFetchProcessor } from './queue.processor';
+import { QUEUE_LIQUIDATION, QUEUE_SCORE_SYNC, QUEUE_PRICE_FETCH } from './queue.constants';
 
-export const QUEUE_LIQUIDATION = 'liquidation';
-export const QUEUE_SCORE_SYNC = 'score-sync';
-export const QUEUE_PRICE_FETCH = 'price-fetch';
+export { QUEUE_LIQUIDATION, QUEUE_SCORE_SYNC, QUEUE_PRICE_FETCH };
 
 @Global()
 @Module({
