@@ -29,6 +29,10 @@ export class PositionsRepository {
       .getMany();
   }
 
+  async findByLoanId(loanId: string): Promise<LoanSnapshot | null> {
+    return this.repo.findOne({ where: { loanId } });
+  }
+
   async upsert(data: Partial<LoanSnapshot>): Promise<LoanSnapshot> {
     const existing = await this.repo.findOne({ where: { loanId: data.loanId } });
     if (existing) {

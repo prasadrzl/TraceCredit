@@ -43,12 +43,38 @@ export class PositionsService {
     const pool = this.contracts.addr.lendingPool;
     const iae = this.contracts.addr.interestAccrualEngine;
 
-    const loanRaw = await this.chain.publicClient.readContract({
-      address: pool,
-      abi: LENDING_POOL_ABI,
-      functionName: 'getLoan',
-      args: [loanId],
-    }) as { borrower: string; principal: bigint; rateBps: bigint; startTime: bigint; dueTime: bigint; status: number };
+    let loanRaw: { borrower: string; principal: bigint; rateBps: bigint; startTime: bigint; dueTime: bigint; status: number } | null = null;
+
+    try {
+      loanRaw = await this.chain.publicClient.readContract({
+        address: pool,
+        abi: LENDING_POOL_ABI,
+        functionName: 'getLoan',
+        args: [loanId],
+      }) as typeof loanRaw;
+    } catch (err: any) {
+      this.logger.warn(`getLoan on-chain failed for ${loanId}: ${err.message}`, 'PositionsService');
+    }
+
+    if (!loanRaw) {
+      const snap = await this.repo.findByLoanId(loanId.toString());
+      const now = Math.floor(Date.now() / 1000);
+      const dueAt = Number(snap?.dueAt ?? 0);
+      const result: LoanDetail = {
+        loanId: loanId.toString(),
+        borrower: snap?.borrower ?? '',
+        principal: snap?.principal ?? '0',
+        accruedInterest: snap?.accruedInterest ?? '0',
+        totalOwed: String(BigInt(snap?.principal ?? '0') + BigInt(snap?.accruedInterest ?? '0')),
+        rateBps: String(snap?.rateBps ?? 0),
+        startTime: 0,
+        dueTime: dueAt,
+        status: snap?.status ?? LoanStatus.ACTIVE,
+        isOverdue: dueAt > 0 && dueAt < now && snap?.status === LoanStatus.ACTIVE,
+      };
+      await this.cache.set(cacheKey, result, POSITIONS_CACHE_TTL_MS);
+      return result;
+    }
 
     const nowSec = BigInt(Math.floor(Date.now() / 1000));
     const elapsed = nowSec > loanRaw.startTime ? nowSec - loanRaw.startTime : 0n;
@@ -93,11 +119,42 @@ export class PositionsService {
   }
 
   async getBorrowerPositions(wallet: string): Promise<LoanDetail[]> {
-    const loans = await this.graph.getLoansByBorrower(wallet);
-    const details = await Promise.all(
-      loans.map((l) => this.getLoanDetail(BigInt(l.loanId)).catch(() => null)),
-    );
-    return details.filter(Boolean) as LoanDetail[];
+    const graphLoans = await this.graph.getLoansByBorrower(wallet);
+    if (graphLoans.length > 0) {
+      const now = Math.floor(Date.now() / 1000);
+      return graphLoans.map((l) => {
+        const dueAt = Number(l.dueTime);
+        return {
+          loanId: l.loanId,
+          borrower: l.borrower,
+          principal: l.principal,
+          accruedInterest: '0',
+          totalOwed: l.principal,
+          rateBps: l.rateBps,
+          startTime: 0,
+          dueTime: dueAt,
+          status: l.status,
+          isOverdue: dueAt > 0 && dueAt < now && l.status === 'active',
+        } as LoanDetail;
+      });
+    }
+    const snaps = await this.repo.findByBorrower(wallet);
+    return snaps.map((snap) => {
+      const now = Math.floor(Date.now() / 1000);
+      const dueAt = Number(snap.dueAt ?? 0);
+      return {
+        loanId: snap.loanId,
+        borrower: snap.borrower,
+        principal: snap.principal,
+        accruedInterest: snap.accruedInterest,
+        totalOwed: String(BigInt(snap.principal) + BigInt(snap.accruedInterest)),
+        rateBps: String(snap.rateBps),
+        startTime: 0,
+        dueTime: dueAt,
+        status: snap.status,
+        isOverdue: dueAt > 0 && dueAt < now && snap.status === LoanStatus.ACTIVE,
+      } as LoanDetail;
+    });
   }
 
   async getLoanSnapshotsByBorrower(borrower: string): Promise<LoanSnapshot[]> {
