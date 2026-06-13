@@ -1,9 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
-import { CREDIT_LINE_MANAGER_ABI, RATE_LIMITER_ABI, SCORE_ENGINE_ABI } from '../contracts/abis';
+import { AppLogger } from '../logger/logger.service';
+import { CREDIT_LINE_MANAGER_ABI, RATE_LIMITER_ABI } from '../contracts/abis';
+import { BorrowerProfile } from '../database/entities/borrower-profile.entity';
 
 const CREDIT_CACHE_TTL_MS = 60_000;
 
@@ -29,7 +33,10 @@ export class CreditService {
   constructor(
     private readonly chain: ChainService,
     private readonly contracts: ContractsService,
+    private readonly logger: AppLogger,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
+    @InjectRepository(BorrowerProfile)
+    private readonly profileRepo: Repository<BorrowerProfile>,
   ) {}
 
   async getCreditLine(wallet: `0x${string}`): Promise<CreditLine> {
@@ -37,32 +44,47 @@ export class CreditService {
     const cached = await this.cache.get<CreditLine>(cacheKey);
     if (cached) return cached;
 
-    const clm = this.contracts.addr.creditLineManager;
+    try {
+      const clm = this.contracts.addr.creditLineManager;
+      const [available, line] = await this.chain.publicClient.multicall({
+        contracts: [
+          { address: clm, abi: CREDIT_LINE_MANAGER_ABI, functionName: 'available', args: [wallet] },
+          { address: clm, abi: CREDIT_LINE_MANAGER_ABI, functionName: 'getCreditLine', args: [wallet] },
+        ],
+        allowFailure: false,
+      });
 
-    const [available, line] = await this.chain.publicClient.multicall({
-      contracts: [
-        { address: clm, abi: CREDIT_LINE_MANAGER_ABI, functionName: 'available', args: [wallet] },
-        { address: clm, abi: CREDIT_LINE_MANAGER_ABI, functionName: 'getCreditLine', args: [wallet] },
-      ],
-      allowFailure: false,
-    });
+      const { limit, used, lastUpdated, frozen } = line as {
+        limit: bigint; used: bigint; lastUpdated: number; frozen: boolean;
+      };
 
-    const { limit, used, lastUpdated, frozen } = line as {
-      limit: bigint;
-      used: bigint;
-      lastUpdated: number;
-      frozen: boolean;
-    };
+      const result: CreditLine = {
+        wallet,
+        limit: limit.toString(),
+        used: used.toString(),
+        available: (available as bigint).toString(),
+        frozen: Boolean(frozen),
+        lastUpdated: Number(lastUpdated),
+      };
+      await this.cache.set(cacheKey, result, CREDIT_CACHE_TTL_MS);
+      return result;
+    } catch (err: any) {
+      this.logger.warn(`getCreditLine on-chain failed, falling back to DB: ${err.message}`, 'CreditService');
+    }
+
+    const profile = await this.profileRepo.findOne({ where: { wallet: wallet.toLowerCase() } });
+    const limit = profile?.creditLimit ?? '0';
+    const used = profile?.creditUsed ?? '0';
+    const available = (parseFloat(limit) - parseFloat(used)).toFixed(2);
 
     const result: CreditLine = {
       wallet,
-      limit: limit.toString(),
-      used: used.toString(),
-      available: (available as bigint).toString(),
-      frozen: Boolean(frozen),
-      lastUpdated: Number(lastUpdated),
+      limit: String(Math.round(parseFloat(limit) * 1e6)),
+      used: String(Math.round(parseFloat(used) * 1e6)),
+      available: String(Math.round(parseFloat(available) * 1e6)),
+      frozen: false,
+      lastUpdated: 0,
     };
-
     await this.cache.set(cacheKey, result, CREDIT_CACHE_TTL_MS);
     return result;
   }
@@ -72,27 +94,41 @@ export class CreditService {
     const cached = await this.cache.get<RateLimitStatus>(cacheKey);
     if (cached) return cached;
 
-    const rl = this.contracts.addr.rateLimiter;
+    try {
+      const rl = this.contracts.addr.rateLimiter;
+      const [dailyLimit, remaining, windowData] = await this.chain.publicClient.multicall({
+        contracts: [
+          { address: rl, abi: RATE_LIMITER_ABI, functionName: 'dailyLimit', args: [tier] },
+          { address: rl, abi: RATE_LIMITER_ABI, functionName: 'remaining', args: [wallet, tier] },
+          { address: rl, abi: RATE_LIMITER_ABI, functionName: 'windows', args: [wallet] },
+        ],
+        allowFailure: false,
+      });
 
-    const [dailyLimit, remaining, windowData] = await this.chain.publicClient.multicall({
-      contracts: [
-        { address: rl, abi: RATE_LIMITER_ABI, functionName: 'dailyLimit', args: [tier] },
-        { address: rl, abi: RATE_LIMITER_ABI, functionName: 'remaining', args: [wallet, tier] },
-        { address: rl, abi: RATE_LIMITER_ABI, functionName: 'windows', args: [wallet] },
-      ],
-      allowFailure: false,
-    });
+      const [, windowStart] = windowData as [bigint, number];
+      const result: RateLimitStatus = {
+        wallet,
+        tier,
+        dailyLimit: (dailyLimit as bigint).toString(),
+        remaining: (remaining as bigint).toString(),
+        windowStart: Number(windowStart),
+      };
+      await this.cache.set(cacheKey, result, 30_000);
+      return result;
+    } catch (err: any) {
+      this.logger.warn(`getRateLimitStatus on-chain failed, falling back to DB: ${err.message}`, 'CreditService');
+    }
 
-    const [, windowStart] = windowData as [bigint, number];
-
+    const profile = await this.profileRepo.findOne({ where: { wallet: wallet.toLowerCase() } });
     const result: RateLimitStatus = {
       wallet,
       tier,
-      dailyLimit: (dailyLimit as bigint).toString(),
-      remaining: (remaining as bigint).toString(),
-      windowStart: Number(windowStart),
+      dailyLimit: profile?.rateLimit24h ? String(Math.round(parseFloat(profile.rateLimit24h) * 1e6)) : '0',
+      remaining: profile?.rateLimit24h && profile?.rateLimitUsed
+        ? String(Math.round((parseFloat(profile.rateLimit24h) - parseFloat(profile.rateLimitUsed)) * 1e6))
+        : '0',
+      windowStart: 0,
     };
-
     await this.cache.set(cacheKey, result, 30_000);
     return result;
   }
