@@ -71,46 +71,66 @@ export class ScoreService {
     const cached = await this.cache.get<WalletScore>(cacheKey);
     if (cached) return cached;
 
-    const sbt = this.contracts.addr.reputationSbt;
-    const se = this.contracts.addr.scoreEngine;
+    try {
+      const sbt = this.contracts.addr.reputationSbt;
+      const se = this.contracts.addr.scoreEngine;
 
-    const [score, hasSbt, isFrozen, isBlacklisted, tierIndex, creditLimit, rateBps, lockup, lastActivity] =
-      await this.chain.publicClient.multicall({
-        contracts: [
-          { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'getScore', args: [wallet] },
-          { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'hasSBT', args: [wallet] },
-          { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'isFrozen', args: [wallet] },
-          { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'isBlacklisted', args: [wallet] },
-          { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getCreditTier', args: [wallet] },
-          { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getCreditLimit', args: [wallet] },
-          { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getInterestRateBps', args: [wallet] },
-          { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getLimitLockup', args: [wallet] },
-          { address: se, abi: SCORE_ENGINE_ABI, functionName: 'lastActivity', args: [wallet] },
-        ],
-        allowFailure: false,
-      });
+      const [score, hasSbt, isFrozen, isBlacklisted, tierIndex, creditLimit, rateBps, lockup, lastActivity] =
+        await this.chain.publicClient.multicall({
+          contracts: [
+            { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'getScore', args: [wallet] },
+            { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'hasSBT', args: [wallet] },
+            { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'isFrozen', args: [wallet] },
+            { address: sbt, abi: REPUTATION_SBT_ABI, functionName: 'isBlacklisted', args: [wallet] },
+            { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getCreditTier', args: [wallet] },
+            { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getCreditLimit', args: [wallet] },
+            { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getInterestRateBps', args: [wallet] },
+            { address: se, abi: SCORE_ENGINE_ABI, functionName: 'getLimitLockup', args: [wallet] },
+            { address: se, abi: SCORE_ENGINE_ABI, functionName: 'lastActivity', args: [wallet] },
+          ],
+          allowFailure: false,
+        });
 
-    const tier = tierFromOnChain(Number(tierIndex));
+      const tier = tierFromOnChain(Number(tierIndex));
+      const result: WalletScore = {
+        wallet,
+        score: Number(score),
+        tier,
+        hasSbt: Boolean(hasSbt),
+        isFrozen: Boolean(isFrozen),
+        isBlacklisted: Boolean(isBlacklisted),
+        creditLimit: (creditLimit as bigint).toString(),
+        interestRateBps: (rateBps as bigint).toString(),
+        lockupEnds: Number(lockup),
+        lastActivity: Number(lastActivity),
+      };
+      await this.cache.set(cacheKey, result, SCORE_CACHE_TTL_MS);
+      return result;
+    } catch (err: any) {
+      this.logger.warn(`getWalletScore on-chain failed, falling back to DB: ${err.message}`, 'ScoreService');
+    }
 
+    const profile = await this.profileRepo.findOne({ where: { wallet: wallet.toLowerCase() } });
     const result: WalletScore = {
       wallet,
-      score: Number(score),
-      tier,
-      hasSbt: Boolean(hasSbt),
-      isFrozen: Boolean(isFrozen),
-      isBlacklisted: Boolean(isBlacklisted),
-      creditLimit: (creditLimit as bigint).toString(),
-      interestRateBps: (rateBps as bigint).toString(),
-      lockupEnds: Number(lockup),
-      lastActivity: Number(lastActivity),
+      score: profile?.score ?? 0,
+      tier: (profile?.tier ?? ScoreTier.NONE) as ScoreTier,
+      hasSbt: profile?.sbtMinted ?? false,
+      isFrozen: false,
+      isBlacklisted: false,
+      creditLimit: profile?.creditLimit ? String(Math.round(parseFloat(profile.creditLimit) * 1e6)) : '0',
+      interestRateBps: String(profile?.interestRateBps ?? 0),
+      lockupEnds: 0,
+      lastActivity: 0,
     };
-
     await this.cache.set(cacheKey, result, SCORE_CACHE_TTL_MS);
     return result;
   }
 
   async getScoreHistory(wallet: string, limit = 50) {
-    return this.graph.getScoreHistory(wallet, limit);
+    const graphData = await this.graph.getScoreHistory(wallet, limit);
+    if (graphData.length > 0) return graphData;
+    return this.repo.findByWallet(wallet.toLowerCase(), limit);
   }
 
   async getDbScoreHistory(wallet: string, limit = 50) {

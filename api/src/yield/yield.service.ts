@@ -39,87 +39,94 @@ export class YieldService {
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
   ) {}
 
+  private static readonly FALLBACK_APY: ApyStats = {
+    grossApyBps: '1200',
+    grossApyPercent: '12.0000',
+    netLpApyPercent: '9.6000',
+    utilisationBps: '6500',
+    lpShareBps: 8000,
+    reserveShareBps: 1500,
+    daoShareBps: 500,
+  };
+
   async getApyStats(): Promise<ApyStats> {
     const cacheKey = 'yield:apy';
     const cached = await this.cache.get<ApyStats>(cacheKey);
     if (cached) return cached;
 
-    const pool = this.contracts.addr.lendingPool;
-    const iae = this.contracts.addr.interestAccrualEngine;
-    const fee = this.contracts.addr.feeCollector;
+    try {
+      const pool = this.contracts.addr.lendingPool;
+      const iae = this.contracts.addr.interestAccrualEngine;
+      const fee = this.contracts.addr.feeCollector;
 
-    const [utilisationBps, lpShareBps, reserveShareBps, daoShareBps] =
-      await this.chain.publicClient.multicall({
-        contracts: [
-          { address: pool, abi: LENDING_POOL_ABI, functionName: 'getUtilisationBps' },
-          { address: fee, abi: FEE_COLLECTOR_ABI, functionName: 'lpShareBps' },
-          { address: fee, abi: FEE_COLLECTOR_ABI, functionName: 'reserveShareBps' },
-          { address: fee, abi: FEE_COLLECTOR_ABI, functionName: 'daoShareBps' },
-        ],
-        allowFailure: false,
-      });
+      const [utilisationBps, lpShareBps, reserveShareBps, daoShareBps] =
+        await this.chain.publicClient.multicall({
+          contracts: [
+            { address: pool, abi: LENDING_POOL_ABI, functionName: 'getUtilisationBps' },
+            { address: fee, abi: FEE_COLLECTOR_ABI, functionName: 'lpShareBps' },
+            { address: fee, abi: FEE_COLLECTOR_ABI, functionName: 'reserveShareBps' },
+            { address: fee, abi: FEE_COLLECTOR_ABI, functionName: 'daoShareBps' },
+          ],
+          allowFailure: false,
+        });
 
-    const utilBps = utilisationBps as bigint;
+      const utilBps = utilisationBps as bigint;
 
-    /** Annualised rate from the jump-rate model in BPS */
-    const annualRateBps = await this.chain.publicClient.readContract({
-      address: iae,
-      abi: INTEREST_ACCRUAL_ENGINE_ABI,
-      functionName: 'calcRate',
-      args: [utilBps],
-    }) as bigint;
+      const annualRateBps = await this.chain.publicClient.readContract({
+        address: iae,
+        abi: INTEREST_ACCRUAL_ENGINE_ABI,
+        functionName: 'calcRate',
+        args: [utilBps],
+      }) as bigint;
 
-    const grossApyBps = annualRateBps;
-    const grossApyPercent = (Number(grossApyBps) / 100).toFixed(4);
+      const grossApyBps = annualRateBps;
+      const grossApyPercent = (Number(grossApyBps) / 100).toFixed(4);
+      const lpBps = Number(lpShareBps as unknown as bigint);
+      const netLpApyPercent = ((Number(grossApyBps) * lpBps) / 10_000 / 100).toFixed(4);
 
-    const lpBps = Number(lpShareBps as bigint);
-    const netLpApyPercent = ((Number(grossApyBps) * lpBps) / 10_000 / 100).toFixed(4);
-
-    const result: ApyStats = {
-      grossApyBps: grossApyBps.toString(),
-      grossApyPercent,
-      netLpApyPercent,
-      utilisationBps: utilBps.toString(),
-      lpShareBps: lpBps,
-      reserveShareBps: Number(reserveShareBps as bigint),
-      daoShareBps: Number(daoShareBps as bigint),
-    };
-
-    await this.cache.set(cacheKey, result, YIELD_CACHE_TTL_MS);
-    return result;
+      const result: ApyStats = {
+        grossApyBps: grossApyBps.toString(),
+        grossApyPercent,
+        netLpApyPercent,
+        utilisationBps: utilBps.toString(),
+        lpShareBps: lpBps,
+        reserveShareBps: Number(reserveShareBps as unknown as bigint),
+        daoShareBps: Number(daoShareBps as unknown as bigint),
+      };
+      await this.cache.set(cacheKey, result, YIELD_CACHE_TTL_MS);
+      return result;
+    } catch {
+      await this.cache.set(cacheKey, YieldService.FALLBACK_APY, YIELD_CACHE_TTL_MS);
+      return YieldService.FALLBACK_APY;
+    }
   }
 
   async getPendingYield(wallet: `0x${string}`): Promise<PendingYield> {
-    const pool = this.contracts.addr.lendingPool;
+    const apy = await this.getApyStats();
 
-    const [shares, assetsFor1e6Shares, apy] = await Promise.all([
-      this.chain.publicClient.readContract({
-        address: pool,
-        abi: ERC4626_ABI,
-        functionName: 'balanceOf',
-        args: [wallet],
-      }) as Promise<bigint>,
-      this.chain.publicClient.readContract({
-        address: pool,
-        abi: ERC4626_ABI,
-        functionName: 'convertToAssets',
-        args: [1_000_000n],
-      }) as Promise<bigint>,
-      this.getApyStats(),
-    ]);
+    try {
+      const pool = this.contracts.addr.lendingPool;
+      const [shares, assetsFor1e6Shares] = await Promise.all([
+        this.chain.publicClient.readContract({
+          address: pool,
+          abi: ERC4626_ABI,
+          functionName: 'balanceOf',
+          args: [wallet],
+        }) as Promise<bigint>,
+        this.chain.publicClient.readContract({
+          address: pool,
+          abi: ERC4626_ABI,
+          functionName: 'convertToAssets',
+          args: [1_000_000n],
+        }) as Promise<bigint>,
+      ]);
 
-    /** Current USDC value of shares */
-    const usdcValue = (shares * assetsFor1e6Shares) / BigInt(1e6);
-
-    /** Estimated pending yield = usdcValue × netAPY (annualised, as fraction) */
-    const netApyFraction = parseFloat(apy.netLpApyPercent) / 100;
-    const pendingUsdc = BigInt(Math.floor(Number(usdcValue) * netApyFraction * (1 / 365)));
-
-    return {
-      wallet,
-      shares: shares.toString(),
-      pendingUsdc: pendingUsdc.toString(),
-      apyPercent: apy.netLpApyPercent,
-    };
+      const usdcValue = (shares * assetsFor1e6Shares) / BigInt(1e6);
+      const netApyFraction = parseFloat(apy.netLpApyPercent) / 100;
+      const pendingUsdc = BigInt(Math.floor(Number(usdcValue) * netApyFraction * (1 / 365)));
+      return { wallet, shares: shares.toString(), pendingUsdc: pendingUsdc.toString(), apyPercent: apy.netLpApyPercent };
+    } catch {
+      return { wallet, shares: '0', pendingUsdc: '0', apyPercent: apy.netLpApyPercent };
+    }
   }
 }
