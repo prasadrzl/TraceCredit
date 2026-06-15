@@ -6,11 +6,11 @@
     "web"
   ],
   "scripts": {
-    "dev:web": "yarn workspace tracecredit-web dev",
-    "dev:api": "yarn workspace tracecredit-api start:dev",
-    "build": "yarn workspaces run build",
+    "dev:web": "npm run dev -w web",
+    "dev:api": "npm run start:dev -w api",
+    "build": "npm run build --workspaces",
     "test:contracts": "cd contracts && forge test",
-    "test:api": "yarn workspace tracecredit-api test",
-    "lint": "yarn workspaces run lint"
+    "test:api": "npm run test -w api",
+    "lint": "npm run lint --workspaces --if-present"
   }
 }

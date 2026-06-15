@@ -21,8 +21,5 @@ build/
 coverage/
 *.log
 
-# Yarn Berry PnP / install state (generated, not source)
-.pnp.cjs
-.pnp.loader.mjs
-.yarn/install-state.gz
-.yarn/cache/
+# npm
+package-lock.json

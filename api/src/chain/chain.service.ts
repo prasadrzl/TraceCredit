@@ -18,6 +18,7 @@ export class ChainService implements OnModuleInit {
   onModuleInit(): void {
     const rpcUrl = this.config.get<string>('chain.rpcUrl')!;
 
+    // @ts-ignore TS2589: viem generics exceed tsc depth limit — safe to ignore
     this._publicClient = createPublicClient({
       chain: optimismSepolia,
       transport: http(rpcUrl, {
