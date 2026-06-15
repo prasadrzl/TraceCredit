@@ -4,10 +4,13 @@ A full-stack DeFi lending protocol on **Optimism Sepolia** where borrowers acces
 
 ---
 
-<img width="1726" height="904" alt="Screenshot 2026-06-15 at 11 58 07 AM" src="https://github.com/user-attachments/assets/932e4531-7f76-4c5c-bcb0-a96eaab4956b" />
-<img width="1720" height="908" alt="Screenshot 2026-06-15 at 11 57 53 AM" src="https://github.com/user-attachments/assets/90dd56d3-5242-4184-920e-849cb858cd81" />
-<img width="1728" height="905" alt="Screenshot 2026-06-15 at 11 57 29 AM" src="https://github.com/user-attachments/assets/e9d83a13-69f2-40e9-8456-3da70c9695a7" />
-<img width="1728" height="907" alt="Screenshot 2026-06-15 at 11 57 05 AM" src="https://github.com/user-attachments/assets/36c08258-da74-468e-ae7b-c22b2176a7ad" />
+| Dashboard | Portfolio |
+|:---------:|:---------:|
+| <img alt="Dashboard" src="https://github.com/user-attachments/assets/932e4531-7f76-4c5c-bcb0-a96eaab4956b" /> | <img alt="Portfolio" src="https://github.com/user-attachments/assets/90dd56d3-5242-4184-920e-849cb858cd81" /> |
+
+| Reputation | History |
+|:----------:|:-------:|
+| <img alt="Reputation" src="https://github.com/user-attachments/assets/e9d83a13-69f2-40e9-8456-3da70c9695a7" /> | <img alt="History" src="https://github.com/user-attachments/assets/36c08258-da74-468e-ae7b-c22b2176a7ad" /> |
 
 ___
 
@@ -207,20 +210,25 @@ Borrowers       → cumulative borrow/repay totals
 
 ### Pages
 
-```
-web/app/
-├── (main)/
-│   ├── page.tsx              Dashboard — TVL, utilisation, live activity feed
-│   ├── borrow/               Score panel, credit bar, borrow form, active loans
-│   ├── lend/                 LP position, deposit/withdraw, APY breakdown
-│   ├── portfolio/            Net worth, health cards, borrow + LP positions
-│   ├── reputation/           SBT card, score arc, signals, attestations, decay
-│   ├── markets/              Volume chart, borrows table, score distribution
-│   ├── liquidations/         Liquidation table, recovery panel, keeper status
-│   ├── history/              Loan history table + individual loan detail
-│   └── score-history/        Score trend chart, signal breakdown, event table
-└── onboarding/               Multi-step — connect wallet → mint SBT → stake USDC
-```
+| Dashboard | Borrow |
+| --------- | ------ |
+| TVL, utilisation, live activity feed | Score panel, credit bar, borrow form, active loans |
+
+| Lend | Portfolio |
+| ---- | --------- |
+| LP position, deposit/withdraw, APY breakdown | Net worth, health cards, borrow + LP positions |
+
+| Reputation | Markets |
+| ---------- | ------- |
+| SBT card, score arc, signals, attestations, decay | Volume chart, borrows table, score distribution |
+
+| Liquidations | History |
+| ------------ | ------- |
+| Liquidation table, recovery panel, keeper status | Loan history table + individual loan detail |
+
+| Score history | Onboarding |
+| ------------- | ---------- |
+| Score trend chart, signal breakdown, event table | Multi-step — connect wallet → mint SBT → stake USDC |
 
 ### Data Flow
 
