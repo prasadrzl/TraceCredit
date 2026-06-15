@@ -3,17 +3,18 @@
 A full-stack DeFi lending protocol on **Optimism Sepolia** where borrowers access undercollateralized USDC loans based on on-chain reputation scores stored in **ERC-5192 Soulbound Tokens**. Lenders deposit into an **ERC-4626 vault** and earn yield from borrower interest.
 
 ---
+
 ## Screenshots for web app
 
-| Reputation |  Loan Score|
-|:---------:|:---------:|
+|                                                  Reputation                                                   |                                                  Loan Score                                                   |
+| :-----------------------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------------------------: |
 | <img alt="Dashboard" src="https://github.com/user-attachments/assets/932e4531-7f76-4c5c-bcb0-a96eaab4956b" /> | <img alt="Portfolio" src="https://github.com/user-attachments/assets/90dd56d3-5242-4184-920e-849cb858cd81" /> |
 
-| Portfolio | Dashboard |
-|:----------:|:-------:|
+|                                                   Portfolio                                                    |                                                  Dashboard                                                  |
+| :------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------: |
 | <img alt="Reputation" src="https://github.com/user-attachments/assets/e9d83a13-69f2-40e9-8456-3da70c9695a7" /> | <img alt="History" src="https://github.com/user-attachments/assets/36c08258-da74-468e-ae7b-c22b2176a7ad" /> |
 
-___
+---
 
 ## Architecture Overview
 
@@ -204,32 +205,27 @@ Borrowers       → cumulative borrow/repay totals
 
 ---
 
-## Frontend
+Frontend · MD
 
-**Stack:** Next.js 14 (App Router) · wagmi v2 · viem v2 · TanStack React Query v5
+# Frontend
+
+**Stack:** Next.js 14 (App Router) · wagmi v2 · viem v2 · TanStack React Query v5  
 **Port:** 3000
 
-### Pages
+## Pages
 
-| Dashboard | Borrow |
-| --------- | ------ |
-| TVL, utilisation, live activity feed | Score panel, credit bar, borrow form, active loans |
-
-| Lend | Portfolio |
-| ---- | --------- |
-| LP position, deposit/withdraw, APY breakdown | Net worth, health cards, borrow + LP positions |
-
-| Reputation | Markets |
-| ---------- | ------- |
-| SBT card, score arc, signals, attestations, decay | Volume chart, borrows table, score distribution |
-
-| Liquidations | History |
-| ------------ | ------- |
-| Liquidation table, recovery panel, keeper status | Loan history table + individual loan detail |
-
-| Score history | Onboarding |
-| ------------- | ---------- |
-| Score trend chart, signal breakdown, event table | Multi-step — connect wallet → mint SBT → stake USDC |
+| Page          | Description                                         |
+| ------------- | --------------------------------------------------- |
+| Dashboard     | TVL, utilisation, live activity feed                |
+| Borrow        | Score panel, credit bar, borrow form, active loans  |
+| Lend          | LP position, deposit/withdraw, APY breakdown        |
+| Portfolio     | Net worth, health cards, borrow + LP positions      |
+| Reputation    | SBT card, score arc, signals, attestations, decay   |
+| Markets       | Volume chart, borrows table, score distribution     |
+| Liquidations  | Liquidation table, recovery panel, keeper status    |
+| History       | Loan history table + individual loan detail         |
+| Score history | Score trend chart, signal breakdown, event table    |
+| Onboarding    | Multi-step — connect wallet → mint SBT → stake USDC |
 
 ### Data Flow
 
