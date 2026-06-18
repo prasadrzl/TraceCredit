@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { useAccount, useDisconnect } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Sun, Moon, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import {
@@ -45,44 +45,6 @@ function ThemeToggle() {
   );
 }
 
-function WalletChip() {
-  const { address, isConnected, chain } = useAccount();
-  const { disconnect } = useDisconnect();
-
-  if (isConnected && address) {
-    const short = `${address.slice(0, 6)}…${address.slice(-4)}`;
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1.5 rounded-full border border-[var(--border)] bg-bg-card px-3 py-1.5 text-xs font-mono hover:bg-bg-surface transition-colors">
-            <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-            <span className="text-text-secondary">{short}</span>
-            {chain?.name && (
-              <span className="text-text-tertiary">· {chain.name}</span>
-            )}
-            <ChevronDown className="h-3 w-3 text-text-tertiary" />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="bg-bg-card border-[var(--border)]">
-          <DropdownMenuItem onClick={() => disconnect()} className="text-danger cursor-pointer">
-            Disconnect
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  }
-
-  const router = useRouter();
-
-  return (
-    <button
-      onClick={() => router.push('/onboarding')}
-      className="flex items-center gap-1.5 rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white hover:opacity-90 transition-opacity"
-    >
-      Get started →
-    </button>
-  );
-}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -154,7 +116,7 @@ export function Navbar() {
         {/* Right side */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <ThemeToggle />
-          <WalletChip />
+          <ConnectButton />
         </div>
       </div>
     </header>

@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import '@/styles/globals.css';
+import '@rainbow-me/rainbowkit/styles.css';
 import { Providers } from '@/providers';
 import { Toaster } from '@/components/ui/toaster';
 import { TxModalProvider } from '@/components/modals/tx-modal-provider';
