@@ -106,7 +106,7 @@ export class CreditService {
         allowFailure: false,
       });
 
-      const [windowUsed, windowStart] = windowData as [bigint, bigint];
+      const [windowUsed, windowStart] = windowData as unknown as [bigint, bigint];
       const windowResetsAt = Number(windowStart) + 86400;
       const result: RateLimitStatus = {
         wallet,

@@ -105,8 +105,9 @@ export class PoolService {
         address: fee,
         abi: FEE_COLLECTOR_ABI,
         functionName: 'reserveShareBps',
-      }) as bigint;
-      reserveFactorBps = Number(reserveShareBps);
+      });
+      // @ts-ignore TS2352
+      reserveFactorBps = Number(reserveShareBps as unknown as bigint);
     } catch {
       // fallback to default
     }
