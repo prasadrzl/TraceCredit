@@ -77,28 +77,24 @@ export function DashboardStatCards() {
         icon={<Database className="h-3 w-3" />}
         label="Total Value Locked"
         value={fmt(vault?.totalAssets)}
-        delta={{ value: '+2.4%', positive: true }}
-        sub="last 24h"
+        sub="USDC supplied"
       />
       <StatCard
         icon={<DollarSign className="h-3 w-3" />}
         label="Total Borrowed"
         value={fmt(vault?.outstandingLoans)}
-        delta={{ value: '+4.1%', positive: true }}
-        sub="last 24h"
+        sub="outstanding loans"
       />
       <StatCard
         icon={<Users className="h-3 w-3" />}
         label="Active Borrowers"
         value={(stats?.activeBorrowers ?? 0).toLocaleString()}
-        delta={{ value: `+18`, positive: true }}
-        sub="vs last week"
+        sub="open positions"
       />
       <StatCard
         icon={<Star className="h-3 w-3" />}
         label="Average Score"
         value={String(stats?.averageScore ?? 0)}
-        delta={{ value: '-3', positive: false }}
         sub="across all tiers"
       />
     </div>
