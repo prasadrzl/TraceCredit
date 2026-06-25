@@ -32,6 +32,15 @@ export interface DailyVolume {
   liquidationVolume: string;
 }
 
+export interface ScoreBucket { range: string; count: number; }
+export interface TierDistribution { Bronze: number; Silver: number; Gold: number; Platinum: number; Diamond: number; }
+export interface ScoreDistributionMeta { median: number; p90: number; totalProfiles: number; }
+export interface ScoreDistributionResult {
+  buckets: ScoreBucket[];
+  tiers: TierDistribution;
+  meta: ScoreDistributionMeta;
+}
+
 @Injectable()
 export class AnalyticsService {
   constructor(
@@ -197,6 +206,63 @@ export class AnalyticsService {
       };
     });
 
+    await this.cache.set(cacheKey, result, ANALYTICS_CACHE_TTL_MS);
+    return result;
+  }
+
+  async getScoreDistribution(): Promise<ScoreDistributionResult> {
+    const cacheKey = 'analytics:score-distribution';
+    const cached = await this.cache.get<ScoreDistributionResult>(cacheKey);
+    if (cached) return cached;
+
+    const RANGES = [
+      { range: '0–199', min: 0, max: 199 },
+      { range: '200–399', min: 200, max: 399 },
+      { range: '400–599', min: 400, max: 599 },
+      { range: '600–699', min: 600, max: 699 },
+      { range: '700–799', min: 700, max: 799 },
+      { range: '800+', min: 800, max: 1000 },
+    ];
+
+    const [bucketRows, tierRows, scores] = await Promise.all([
+      Promise.all(
+        RANGES.map(({ range, min, max }) =>
+          this.profileRepo
+            .createQueryBuilder('p')
+            .select('COUNT(*)', 'count')
+            .where('p.score >= :min AND p.score <= :max', { min, max })
+            .getRawOne<{ count: string }>()
+            .then(r => ({ range, count: Number(r?.count ?? 0) })),
+        ),
+      ),
+      this.profileRepo
+        .createQueryBuilder('p')
+        .select('p.tier', 'tier')
+        .addSelect('COUNT(*)', 'count')
+        .groupBy('p.tier')
+        .getRawMany<{ tier: string; count: string }>(),
+      this.profileRepo
+        .createQueryBuilder('p')
+        .select('p.score', 'score')
+        .orderBy('p.score', 'ASC')
+        .getRawMany<{ score: number }>(),
+    ]);
+
+    const tiers: TierDistribution = { Bronze: 0, Silver: 0, Gold: 0, Platinum: 0, Diamond: 0 };
+    for (const { tier, count } of tierRows) {
+      if (tier in tiers) tiers[tier as keyof TierDistribution] = Number(count);
+    }
+
+    const sorted = scores.map(s => Number(s.score)).sort((a, b) => a - b);
+    const total = sorted.length;
+    const median = total > 0 ? sorted[Math.floor(total / 2)] : 0;
+    const p90 = total > 0 ? sorted[Math.floor(total * 0.9)] : 0;
+
+    const result: ScoreDistributionResult = {
+      buckets: bucketRows,
+      tiers,
+      meta: { median, p90, totalProfiles: total },
+    };
     await this.cache.set(cacheKey, result, ANALYTICS_CACHE_TTL_MS);
     return result;
   }

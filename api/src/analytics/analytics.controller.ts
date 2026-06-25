@@ -39,6 +39,13 @@ export class AnalyticsController {
     return this.analyticsService.getProtocolAnalytics();
   }
 
+  @Get('score-distribution')
+  @ApiOperation({ summary: 'Score distribution buckets, tier counts, and distribution meta' })
+  @ApiOkResponse({ description: 'Score distribution data computed from borrower_profiles table' })
+  async getScoreDistribution() {
+    return this.analyticsService.getScoreDistribution();
+  }
+
   @Get('volume')
   @ApiOperation({ summary: 'Daily borrow/repay volume for the past N days' })
   @ApiQuery({
