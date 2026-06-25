@@ -80,3 +80,17 @@ export class BorrowEventDto {
   })
   txHash: string;
 }
+
+export class PoolConfigDto {
+  @ApiProperty({ type: Number, example: 7000, description: 'Interest rate kink point in BPS (below = low rate zone)' })
+  kinkBps: number;
+
+  @ApiProperty({ type: Number, example: 9000, description: 'Max utilisation cap in BPS' })
+  capBps: number;
+
+  @ApiProperty({ type: Number, example: 1500, description: 'Reserve factor in BPS (portion of gross APY to reserve)' })
+  reserveFactorBps: number;
+
+  @ApiProperty({ type: Number, example: 9000, description: 'Max utilisation BPS (same as capBps)' })
+  maxUtilisationBps: number;
+}

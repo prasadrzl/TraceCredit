@@ -10,7 +10,7 @@ import {
 import { PoolService } from './pool.service';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import { PoolOverviewDto, BorrowEventDto } from './pool.dto';
+import { PoolOverviewDto, BorrowEventDto, PoolConfigDto } from './pool.dto';
 import { ApiErrorResponse } from '../common/dto/api-response.dto';
 
 class PoolEventsQueryDto {
@@ -23,10 +23,17 @@ class PoolEventsQueryDto {
 }
 
 @ApiTags('Pool')
-@ApiExtraModels(PoolOverviewDto, BorrowEventDto)
+@ApiExtraModels(PoolOverviewDto, BorrowEventDto, PoolConfigDto)
 @Controller('pool')
 export class PoolController {
   constructor(private readonly poolService: PoolService) {}
+
+  @Get('config')
+  @ApiOperation({ summary: 'Protocol config: kinkBps, capBps, reserveFactorBps' })
+  @ApiOkResponse({ type: PoolConfigDto, description: 'Interest rate model constants and fee config' })
+  async getPoolConfig() {
+    return this.poolService.getPoolConfig();
+  }
 
   @Get('overview')
   @ApiOperation({ summary: 'LendingPool summary: TVL, utilisation, total deposited' })

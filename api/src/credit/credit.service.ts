@@ -25,7 +25,8 @@ export interface RateLimitStatus {
   tier: number;
   dailyLimit: string;
   remaining: string;
-  windowStart: number;
+  windowUsed: string;
+  windowResetsAt: number;
 }
 
 @Injectable()
@@ -105,13 +106,15 @@ export class CreditService {
         allowFailure: false,
       });
 
-      const [, windowStart] = windowData as [bigint, number];
+      const [windowUsed, windowStart] = windowData as [bigint, bigint];
+      const windowResetsAt = Number(windowStart) + 86400;
       const result: RateLimitStatus = {
         wallet,
         tier,
         dailyLimit: (dailyLimit as bigint).toString(),
         remaining: (remaining as bigint).toString(),
-        windowStart: Number(windowStart),
+        windowUsed: windowUsed.toString(),
+        windowResetsAt,
       };
       await this.cache.set(cacheKey, result, 30_000);
       return result;
@@ -120,14 +123,18 @@ export class CreditService {
     }
 
     const profile = await this.profileRepo.findOne({ where: { wallet: wallet.toLowerCase() } });
+    const dailyLimitRaw = profile?.rateLimit24h ? String(Math.round(parseFloat(profile.rateLimit24h) * 1e6)) : '0';
+    const usedRaw = profile?.rateLimitUsed ? String(Math.round(parseFloat(profile.rateLimitUsed) * 1e6)) : '0';
+    const remainingRaw = profile?.rateLimit24h && profile?.rateLimitUsed
+      ? String(Math.round((parseFloat(profile.rateLimit24h) - parseFloat(profile.rateLimitUsed)) * 1e6))
+      : dailyLimitRaw;
     const result: RateLimitStatus = {
       wallet,
       tier,
-      dailyLimit: profile?.rateLimit24h ? String(Math.round(parseFloat(profile.rateLimit24h) * 1e6)) : '0',
-      remaining: profile?.rateLimit24h && profile?.rateLimitUsed
-        ? String(Math.round((parseFloat(profile.rateLimit24h) - parseFloat(profile.rateLimitUsed)) * 1e6))
-        : '0',
-      windowStart: 0,
+      dailyLimit: dailyLimitRaw,
+      remaining: remainingRaw,
+      windowUsed: usedRaw,
+      windowResetsAt: Math.floor(Date.now() / 1000) + 86400,
     };
     await this.cache.set(cacheKey, result, 30_000);
     return result;
