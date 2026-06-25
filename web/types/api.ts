@@ -179,3 +179,10 @@ export interface ComplianceStatus {
   country: string;
   kycPassed: boolean;
 }
+
+export interface PoolConfig {
+  kinkBps: number;
+  capBps: number;
+  reserveFactorBps: number;
+  maxUtilisationBps: number;
+}

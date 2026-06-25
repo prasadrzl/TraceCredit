@@ -7,9 +7,12 @@ import mock from '@/lib/mock/markets.json';
 interface ApiProtocolStats { tvl: string; totalVolumeBorrowed: string; totalVolumeRepaid: string; utilisationBps: string; activeBorrowers: number; totalLiquidations: number; lastUpdated: number; }
 interface ApiVolume { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string; }
 interface ApiPoolOverview { totalAssets: string; totalOutstanding: string; utilisationBps: string; utilisationPercent: string; }
+interface ApiPoolConfig { kinkBps: number; capBps: number; reserveFactorBps: number; maxUtilisationBps: number; }
 interface ApiBorrowEvent { loanId: string; borrower: string; amount: string; timestamp: number; txHash: string; }
 interface ApiLiqRecord { id: string; loanId: string; borrower: string; recoveredAmount: string; writtenOffAmount: string; txHash: string; liquidatedAt: string; }
 interface ApiLiqStats { totalLiquidations: number; totalRecovered: string; totalWrittenOff: string; }
+interface ApiScoreDist { buckets: ScoreBucket[]; tiers: TierDistribution; meta: ScoreDistributionMeta; }
+interface ApiApyStats { grossApyBps: string; grossApyPercent: string; netLpApyPercent: string; utilisationBps: string; lpShareBps: number; reserveShareBps: number; }
 
 export async function getMarketStats(): Promise<MarketStats> {
   try {
@@ -52,19 +55,73 @@ export async function getRecentBorrows(): Promise<MarketBorrowEntry[]> {
 }
 
 export async function getPoolDepthCurve(): Promise<PoolDepthPoint[]> {
-  return mock.poolDepthCurve as PoolDepthPoint[];
+  try {
+    const [poolRes, cfgRes, apyRes] = await Promise.all([
+      apiClient.get<ApiPoolOverview>('/pool/overview'),
+      apiClient.get<ApiPoolConfig>('/pool/config'),
+      apiClient.get<ApiApyStats>('/yield/apy'),
+    ]);
+    const kink = cfgRes.data.kinkBps;
+    const cap = cfgRes.data.capBps;
+    const grossBps = Math.round(Number(apyRes.data.grossApyPercent) * 100);
+    const currentUtil = Number(poolRes.data.utilisationBps);
+
+    return Array.from({ length: 11 }, (_, i) => {
+      const utilBps = Math.round((i / 10) * cap);
+      const utilPct = utilBps / 100;
+      const belowKinkRate = Math.round((grossBps * 0.5 * utilBps) / kink);
+      const aboveKinkRate = Math.round(grossBps * 0.5 + ((grossBps - grossBps * 0.5) * (utilBps - kink)) / (cap - kink));
+      return {
+        utilPct,
+        belowKink: utilBps <= kink ? belowKinkRate : null,
+        aboveKink: utilBps > kink ? aboveKinkRate : null,
+      };
+    });
+  } catch { return mock.poolDepthCurve as PoolDepthPoint[]; }
 }
 
 export async function getPoolDepthStats(): Promise<PoolDepthStats> {
   try {
-    const res = await apiClient.get<ApiPoolOverview>('/pool/overview');
-    return { currentUtilBps: Number(res.data.utilisationBps), belowKinkAprBps: 600, aboveKinkMinBps: 800, aboveKinkMaxBps: 9000, lpNetApyBps: 476, kinkBps: 7000, capBps: 9000, reserveFactorBps: 1500 };
+    const [poolRes, cfgRes, apyRes] = await Promise.all([
+      apiClient.get<ApiPoolOverview>('/pool/overview'),
+      apiClient.get<ApiPoolConfig>('/pool/config'),
+      apiClient.get<ApiApyStats>('/yield/apy'),
+    ]);
+    const grossBps = Math.round(Number(apyRes.data.grossApyPercent) * 100);
+    const netBps = Math.round(Number(apyRes.data.netLpApyPercent) * 100);
+    return {
+      currentUtilBps: Number(poolRes.data.utilisationBps),
+      belowKinkAprBps: Math.round(grossBps * 0.5),
+      aboveKinkMinBps: grossBps,
+      aboveKinkMaxBps: cfgRes.data.capBps,
+      lpNetApyBps: netBps,
+      kinkBps: cfgRes.data.kinkBps,
+      capBps: cfgRes.data.capBps,
+      reserveFactorBps: cfgRes.data.reserveFactorBps,
+    };
   } catch { return mock.poolDepthStats as PoolDepthStats; }
 }
 
-export async function getScoreDistribution(): Promise<ScoreBucket[]> { return mock.scoreDistribution as ScoreBucket[]; }
-export async function getTierDistribution(): Promise<TierDistribution> { return mock.tierDistribution as TierDistribution; }
-export async function getScoreDistributionMeta(): Promise<ScoreDistributionMeta> { return mock.scoreDistributionMeta as ScoreDistributionMeta; }
+export async function getScoreDistribution(): Promise<ScoreBucket[]> {
+  try {
+    const res = await apiClient.get<ApiScoreDist>('/analytics/score-distribution');
+    return res.data.buckets;
+  } catch { return mock.scoreDistribution as ScoreBucket[]; }
+}
+
+export async function getTierDistribution(): Promise<TierDistribution> {
+  try {
+    const res = await apiClient.get<ApiScoreDist>('/analytics/score-distribution');
+    return res.data.tiers;
+  } catch { return mock.tierDistribution as TierDistribution; }
+}
+
+export async function getScoreDistributionMeta(): Promise<ScoreDistributionMeta> {
+  try {
+    const res = await apiClient.get<ApiScoreDist>('/analytics/score-distribution');
+    return res.data.meta;
+  } catch { return mock.scoreDistributionMeta as ScoreDistributionMeta; }
+}
 
 export async function getRecentLiquidations(): Promise<MarketLiquidationEntry[]> {
   try {

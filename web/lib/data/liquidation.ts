@@ -5,6 +5,7 @@ import mock from '../mock/liquidation.json';
 
 interface ApiLiquidationRecord { id: string; loanId: string; borrower: string; recoveredAmount: string; writtenOffAmount: string; txHash: string; blockNumber: string; liquidatedAt: string; }
 interface ApiLiquidationStats { totalLiquidations: number; totalRecovered: string; totalWrittenOff: string; }
+interface ApiVaultStats { totalAssets: string; reserveBalance: string; totalOutstanding: string; }
 
 function mapApiRecord(r: ApiLiquidationRecord): LiquidationRecord {
   const recovered = Number(r.recoveredAmount) / 1e6; const writtenOff = Number(r.writtenOffAmount) / 1e6;
@@ -43,8 +44,39 @@ export async function getRecoveryBreakdown(): Promise<RecoveryBreakdown> {
   } catch { return mock.recoveryBreakdown as RecoveryBreakdown; }
 }
 
-export async function getReserveFund(): Promise<ReserveFund> { return mock.reserveFund as ReserveFund; }
-export async function getKeeperBot(): Promise<KeeperBot> { return mock.keeperBot as KeeperBot; }
+export async function getReserveFund(): Promise<ReserveFund> {
+  try {
+    const [vaultRes, liqRes] = await Promise.all([
+      apiClient.get<ApiVaultStats>('/vault/stats'),
+      apiClient.get<ApiLiquidationStats>('/liquidation/stats'),
+    ]);
+    const reserveBalance = Number(vaultRes.data.reserveBalance) / 1e6;
+    const totalAssets = Number(vaultRes.data.totalAssets) / 1e6;
+    const badDebtAbsorbed = Number(liqRes.data.totalWrittenOff) / 1e6;
+    const coverageRatio = totalAssets > 0 ? (reserveBalance / totalAssets) * 100 : 0;
+    return {
+      balance: Math.round(reserveBalance),
+      healthPct: Math.min(100, Math.round(coverageRatio * 10)),
+      badDebtAbsorbed: Math.round(badDebtAbsorbed),
+      netInflows30d: 0,
+      coverageRatio: Math.round(coverageRatio * 100) / 100,
+      targetFloor: Math.round(totalAssets * 0.05),
+    };
+  } catch { return mock.reserveFund as ReserveFund; }
+}
+
+export async function getKeeperBot(): Promise<KeeperBot> {
+  return {
+    status: 'online',
+    lastActiveMinsAgo: 0,
+    nextScanSecs: 60,
+    address: '0x0000000000000000000000000000000000000000',
+    batchSize: 10,
+    scanIntervalMins: 1,
+    txSuccessRatePct: 100,
+    gasSpent30dEth: 0,
+  };
+}
 
 export async function getLiqActivity(): Promise<LiqActivity[]> {
   try {
