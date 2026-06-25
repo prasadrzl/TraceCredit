@@ -7,7 +7,7 @@ import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { AppLogger } from '../logger/logger.service';
 import { GraphService } from '../graph/graph.service';
-import { LENDING_POOL_ABI } from '../contracts/abis';
+import { LENDING_POOL_ABI, FEE_COLLECTOR_ABI } from '../contracts/abis';
 import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.entity';
 import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 import { PoolStat } from '../database/entities/pool-stat.entity';
@@ -19,6 +19,13 @@ export interface PoolOverview {
   utilisationPercent: string;
   totalDeposited: string;
   paused: boolean;
+}
+
+export interface PoolConfig {
+  kinkBps: number;
+  capBps: number;
+  reserveFactorBps: number;
+  maxUtilisationBps: number;
 }
 
 @Injectable()
@@ -80,6 +87,32 @@ export class PoolService {
       paused: false,
     };
     await this.cache.set(cacheKey, result, 60_000);
+    return result;
+  }
+
+  async getPoolConfig(): Promise<PoolConfig> {
+    const cacheKey = 'pool:config';
+    const cached = await this.cache.get<PoolConfig>(cacheKey);
+    if (cached) return cached;
+
+    const kinkBps = Number(process.env.POOL_KINK_BPS ?? 7000);
+    const capBps = Number(process.env.POOL_CAP_BPS ?? 9000);
+
+    let reserveFactorBps = 1500;
+    try {
+      const fee = this.contracts.addr.feeCollector;
+      const reserveShareBps = await this.chain.publicClient.readContract({
+        address: fee,
+        abi: FEE_COLLECTOR_ABI,
+        functionName: 'reserveShareBps',
+      }) as bigint;
+      reserveFactorBps = Number(reserveShareBps);
+    } catch {
+      // fallback to default
+    }
+
+    const result: PoolConfig = { kinkBps, capBps, reserveFactorBps, maxUtilisationBps: capBps };
+    await this.cache.set(cacheKey, result, 300_000);
     return result;
   }
 
