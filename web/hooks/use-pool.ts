@@ -27,3 +27,11 @@ export function useRecentPoolLiquidations(first = 20) {
     staleTime: REFETCH_INTERVALS.pool,
   });
 }
+
+export function usePoolConfig() {
+  return useQuery({
+    queryKey: ['pool', 'config'],
+    queryFn: poolApi.getConfig,
+    staleTime: 300_000,
+  });
+}

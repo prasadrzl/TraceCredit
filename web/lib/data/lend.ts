@@ -7,19 +7,22 @@ interface ApiVaultStats { totalAssets: string; totalSupply: string; sharePrice: 
 interface ApiApyStats { grossApyBps: string; grossApyPercent: string; netLpApyPercent: string; utilisationBps: string; lpShareBps: number; reserveShareBps: number; }
 interface ApiPendingYield { wallet: string; shares: string; pendingUsdc: string; apyPercent: string; }
 interface ApiVolume { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string; }
+interface ApiPoolConfig { kinkBps: number; capBps: number; reserveFactorBps: number; maxUtilisationBps: number; }
 
 export async function getPoolStats(): Promise<PoolStats> {
   try {
-    const [poolRes, vaultRes, apyRes] = await Promise.all([
+    const [poolRes, vaultRes, apyRes, cfgRes] = await Promise.all([
       apiClient.get<ApiPoolOverview>('/pool/overview'),
       apiClient.get<ApiVaultStats>('/vault/stats'),
       apiClient.get<ApiApyStats>('/yield/apy'),
+      apiClient.get<ApiPoolConfig>('/pool/config'),
     ]);
     return {
       tvl: vaultRes.data.totalAssets, sharesOutstanding: vaultRes.data.totalSupply,
       netLpApyBps: Math.round(Number(apyRes.data.netLpApyPercent) * 100),
       utilisationBps: Number(poolRes.data.utilisationBps),
-      kinkBps: 7000, capBps: 9000, sharePrice: vaultRes.data.sharePrice, sharePriceDeltaBps: 0,
+      kinkBps: cfgRes.data.kinkBps, capBps: cfgRes.data.capBps,
+      sharePrice: vaultRes.data.sharePrice, sharePriceDeltaBps: 0,
     };
   } catch { return mock.poolStats as PoolStats; }
 }
@@ -55,23 +58,25 @@ export async function getApyBreakdown(): Promise<ApyBreakdown> {
 
 export async function getPoolUtilisation(): Promise<PoolUtilisation> {
   try {
-    const [poolRes, apyRes, vaultRes] = await Promise.all([
+    const [poolRes, apyRes, vaultRes, cfgRes] = await Promise.all([
       apiClient.get<ApiPoolOverview>('/pool/overview'),
       apiClient.get<ApiApyStats>('/yield/apy'),
       apiClient.get<ApiVaultStats>('/vault/stats'),
+      apiClient.get<ApiPoolConfig>('/pool/config'),
     ]);
     const grossBps = Math.round(Number(apyRes.data.grossApyPercent) * 100);
     const netBps = Math.round(Number(apyRes.data.netLpApyPercent) * 100);
     return {
       currentUtilBps: Number(poolRes.data.utilisationBps), currentBorrowAprBps: grossBps,
-      kinkBps: 7000, capBps: 9000, grossPoolApyBps: grossBps, reserveFactorBps: grossBps - netBps,
-      reserveBalance: vaultRes.data.reserveBalance, atKinkWarningBps: 7000,
+      kinkBps: cfgRes.data.kinkBps, capBps: cfgRes.data.capBps,
+      grossPoolApyBps: grossBps, reserveFactorBps: cfgRes.data.reserveFactorBps,
+      reserveBalance: vaultRes.data.reserveBalance, atKinkWarningBps: cfgRes.data.kinkBps,
     };
   } catch { return mock.poolUtilisation as PoolUtilisation; }
 }
 
 export async function getLpTransactions(_wallet: string): Promise<LpTransaction[]> {
-  return mock.transactions as LpTransaction[];
+  return [];
 }
 
 export async function getYieldChart7d(): Promise<YieldDataPoint[]> {
