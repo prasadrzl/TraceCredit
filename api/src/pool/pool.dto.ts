@@ -82,15 +82,48 @@ export class BorrowEventDto {
 }
 
 export class PoolConfigDto {
-  @ApiProperty({ type: Number, example: 7000, description: 'Interest rate kink point in BPS (below = low rate zone)' })
+  @ApiProperty({ type: Number, example: 7000 })
   kinkBps: number;
 
-  @ApiProperty({ type: Number, example: 9000, description: 'Max utilisation cap in BPS' })
+  @ApiProperty({ type: Number, example: 9000 })
   capBps: number;
 
-  @ApiProperty({ type: Number, example: 1500, description: 'Reserve factor in BPS (portion of gross APY to reserve)' })
+  @ApiProperty({ type: Number, example: 1500 })
   reserveFactorBps: number;
 
-  @ApiProperty({ type: Number, example: 9000, description: 'Max utilisation BPS (same as capBps)' })
+  @ApiProperty({ type: Number, example: 9000 })
   maxUtilisationBps: number;
+
+  @ApiProperty({ example: { Bronze: { creditLimitUsdc: 0, interestRateBps: 1800, minScore: 0 } } })
+  tiers: Record<string, { creditLimitUsdc: number; interestRateBps: number; minScore: number }>;
+
+  @ApiProperty({ type: Number, example: 1000 })
+  maxScore: number;
+
+  @ApiProperty({ type: Number, example: 800 })
+  diamondScore: number;
+
+  @ApiProperty({ type: Number, example: 7 })
+  gracePeriodDays: number;
+
+  @ApiProperty({ type: Number, example: 22 })
+  onTimeRepaymentScoreGain: number;
+
+  @ApiProperty({ type: Number, example: 50 })
+  gracePeriodScoreHit: number;
+
+  @ApiProperty({ type: Number, example: 50 })
+  sbtStakeUsdc: number;
+
+  @ApiProperty({ type: Number, example: 30 })
+  sbtUnlockDays: number;
+
+  @ApiProperty({ type: Number, example: 90 })
+  signalDecayDays: number;
+
+  @ApiProperty({ type: Number, example: 14 })
+  signalExpiryWarningDays: number;
+
+  @ApiProperty({ type: Number, example: 30 })
+  limitIncreaseDays: number;
 }
