@@ -180,9 +180,26 @@ export interface ComplianceStatus {
   kycPassed: boolean;
 }
 
+export interface TierConfig {
+  creditLimitUsdc: number;
+  interestRateBps: number;
+  minScore: number;
+}
+
 export interface PoolConfig {
   kinkBps: number;
   capBps: number;
   reserveFactorBps: number;
   maxUtilisationBps: number;
+  tiers: Record<string, TierConfig>;
+  maxScore: number;
+  diamondScore: number;
+  gracePeriodDays: number;
+  onTimeRepaymentScoreGain: number;
+  gracePeriodScoreHit: number;
+  sbtStakeUsdc: number;
+  sbtUnlockDays: number;
+  signalDecayDays: number;
+  signalExpiryWarningDays: number;
+  limitIncreaseDays: number;
 }

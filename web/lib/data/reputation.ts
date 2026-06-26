@@ -5,12 +5,13 @@ import type {
 } from '@/types/reputation';
 import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
+import { configApi } from '@/lib/api/config';
 import mock from '@/lib/mock/reputation.json';
 
 interface ApiProfile {
   score: number; tier: string; nextTier: string; nextTierScore: number;
   sbtMinted: boolean; sbtTokenId: string; interestRateBps: number;
-  creditLimit: string; creditUsed: string;
+  creditLimit: string; creditUsed: string; sbtMintedAt?: string; sbtStake?: string;
 }
 interface ApiScoreHistory { score: number; previousScore: number; tier: string; recordedAt: string; }
 interface ApiEvent {
@@ -26,17 +27,22 @@ const SIGNAL_TYPE_MAP: Record<string, RecentEvent['type']> = {
   CROSS_PROTOCOL_REPAYMENT: 'cross', WALLET_AGE: 'wallet',
   KYC_VERIFIED: 'holdings', DECAY: 'decay', ATTESTATION_RECEIVED: 'stake',
 };
-const DIAMOND_SCORE = 800;
 
 export async function getSbtInfo(wallet: string): Promise<SbtInfo> {
   try {
-    const res = await apiClient.get<ApiProfile>(`/score/${wallet}/profile`);
-    const p = res.data;
+    const [profileRes, cfg] = await Promise.all([
+      apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
+      configApi.getProtocolConfig(),
+    ]);
+    const p = profileRes.data;
+    const mintedDate = p.sbtMintedAt
+      ? new Date(p.sbtMintedAt).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })
+      : 'N/A';
     return {
       wallet,
       tokenId: Number(p.sbtTokenId ?? 0),
-      mintedDate: '2024-03-12',
-      stakeLocked: '50000000',
+      mintedDate,
+      stakeLocked: p.sbtStake ?? String(cfg.sbtStakeUsdc * 1e6),
       status: p.sbtMinted ? 'Active' : 'Not minted',
       frozen: false,
     };
@@ -45,44 +51,60 @@ export async function getSbtInfo(wallet: string): Promise<SbtInfo> {
 
 export async function getReputationScore(wallet: string): Promise<ReputationScore> {
   try {
-    const res = await apiClient.get<ApiProfile>(`/score/${wallet}/profile`);
-    const p = res.data;
+    const [profileRes, cfg] = await Promise.all([
+      apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
+      configApi.getProtocolConfig(),
+    ]);
+    const p = profileRes.data;
+    const diamondTier = cfg.tiers['Diamond'];
+    const diamondCreditLimit = diamondTier ? diamondTier.creditLimitUsdc.toLocaleString() : '100,000';
+    const diamondRate = diamondTier ? diamondTier.interestRateBps / 100 : 7;
     const ptsToNextTier = Math.max(0, (p.nextTierScore ?? 0) - p.score);
     return {
       score: p.score,
       tier: p.tier as Tier,
       nextTier: (p.nextTier ?? '') as Tier,
       nextTierScore: p.nextTierScore ?? 0,
-      diamondScore: DIAMOND_SCORE,
+      diamondScore: cfg.diamondScore,
       ptsToNextTier,
-      ptsToDiamond: Math.max(0, DIAMOND_SCORE - p.score),
-      unlocksAtDiamond: '100,000 USDC limit · 7% APR',
-      rateAtDiamond: 700,
-      limitLockupDays: 30,
+      ptsToDiamond: Math.max(0, cfg.diamondScore - p.score),
+      unlocksAtDiamond: `${diamondCreditLimit} USDC limit · ${diamondRate}% APR`,
+      rateAtDiamond: diamondTier?.interestRateBps ?? 700,
+      limitLockupDays: cfg.limitIncreaseDays,
     };
   } catch { return mock.reputationScore as ReputationScore; }
 }
 
 export async function getCreditSnapshot(wallet: string): Promise<CreditSnapshot> {
   try {
-    const [profileRes, loansRes] = await Promise.all([
+    const [profileRes, loansRes, cfg] = await Promise.all([
       apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
       apiClient.get<ApiLoan[]>(`/positions/snapshots/${wallet}`),
+      configApi.getProtocolConfig(),
     ]);
     const p = profileRes.data;
     const loans = loansRes.data;
+    const lastActivity = loans.reduce((min, l) => {
+      const t = Date.now() - new Date(l.createdAt).getTime();
+      return Math.min(min, t);
+    }, Date.now());
+    const lastActivityDaysAgo = Math.floor(lastActivity / 86_400_000);
     return {
       tier: p.tier as Tier,
       creditLimit: (Number(p.creditLimit) * 1e6).toFixed(0),
       creditUsed: (Number(p.creditUsed) * 1e6).toFixed(0),
       creditAvailable: ((Number(p.creditLimit) - Number(p.creditUsed)) * 1e6).toFixed(0),
       interestRateBps: p.interestRateBps,
-      limitIncreaseDays: 30,
+      limitIncreaseDays: cfg.limitIncreaseDays,
       activeLoans: loans.filter(l => l.status === 'active' || l.status === 'grace_period').length,
       loansRepaid: loans.filter(l => l.status === 'repaid').length,
       defaults: loans.filter(l => l.status === 'defaulted' || l.status === 'written_off').length,
-      lastActivityDaysAgo: 2,
-      sbtProtection: { guardianSet: 'TraceCredit DAO', stakeVault: '50 USDC locked', unlockDelay: '30 days' },
+      lastActivityDaysAgo,
+      sbtProtection: {
+        guardianSet: 'TraceCredit DAO',
+        stakeVault: `${cfg.sbtStakeUsdc} USDC locked`,
+        unlockDelay: `${cfg.sbtUnlockDays} days`,
+      },
     };
   } catch { return mock.creditSnapshot as CreditSnapshot; }
 }
@@ -146,9 +168,15 @@ export async function getSignalBreakdown(wallet: string): Promise<SignalBreakdow
 
 export async function getNetScore(wallet: string): Promise<NetScore> {
   try {
-    const res = await apiClient.get<ApiProfile>(`/score/${wallet}/profile`);
-    const p = res.data;
-    const tierBonus = { Bronze: 0, Silver: 10, Gold: 20, Platinum: 35, Diamond: 50 }[p.tier] ?? 0;
+    const [profileRes, cfg] = await Promise.all([
+      apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
+      configApi.getProtocolConfig(),
+    ]);
+    const p = profileRes.data;
+    const tierBonuses: Record<string, number> = {
+      Bronze: 0, Silver: 10, Gold: 20, Platinum: 35, Diamond: 50,
+    };
+    const tierBonus = tierBonuses[p.tier] ?? 0;
     return { base: p.score - tierBonus, tierBonus, displayed: p.score, netPoints: p.score };
   } catch { return mock.netScore as NetScore; }
 }
@@ -178,20 +206,24 @@ export async function getAttestationSources(wallet: string): Promise<Attestation
 
 export async function getSignalDecay(wallet: string): Promise<SignalDecayItem[]> {
   try {
-    const res = await apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=200`);
+    const [res, cfg] = await Promise.all([
+      apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=200`),
+      configApi.getProtocolConfig(),
+    ]);
     return res.data
       .filter(e => e.signalType === 'DECAY' || e.signalType === 'LATE_REPAYMENT')
       .map(e => {
         const applied = new Date(e.occurredAt);
-        const expires = new Date(applied.getTime() + 90 * 86_400_000);
+        const expiresMs = applied.getTime() + cfg.signalDecayDays * 86_400_000;
+        const expires = new Date(expiresMs);
         return {
           id: e.id,
           signal: e.signalSub,
           applied: applied.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
           expires: expires.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-          duration: '90 days',
+          duration: `${cfg.signalDecayDays} days`,
           points: e.delta,
-          expiring: Math.ceil((expires.getTime() - Date.now()) / 86_400_000) <= 14,
+          expiring: Math.ceil((expiresMs - Date.now()) / 86_400_000) <= cfg.signalExpiryWarningDays,
         };
       });
   } catch { return mock.signalDecay as SignalDecayItem[]; }
