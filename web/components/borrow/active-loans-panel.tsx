@@ -5,6 +5,8 @@ import { TierBadge } from '@/components/common/tier-badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useActiveLoans } from '@/hooks/use-borrow';
 import { useTxModal } from '@/store/tx-modal-store';
+import { useWalletScore } from '@/hooks/use-wallet-score';
+import { useProtocolConfig, PROTOCOL_CONFIG_DEFAULTS } from '@/hooks/use-config';
 import type { LoanState } from '@/types/borrow';
 
 interface Props { wallet: string }
@@ -20,16 +22,23 @@ const STATE_STYLE: Record<LoanState, { label: string; color: string }> = {
 export function ActiveLoansPanel({ wallet }: Props) {
   const { data, isLoading } = useActiveLoans(wallet);
   const { open, transitionTo } = useTxModal();
+  const { data: scoreData } = useWalletScore(wallet);
+  const { data: cfg } = useProtocolConfig();
+
+  const currentScore = scoreData?.score ?? 0;
+  const scoreGain = cfg?.onTimeRepaymentScoreGain ?? PROTOCOL_CONFIG_DEFAULTS.onTimeRepaymentScoreGain;
+  const scorePenalty = cfg?.gracePeriodScoreHit ?? PROTOCOL_CONFIG_DEFAULTS.gracePeriodScoreHit;
 
   const handleRepay = (loanId: string, totalDue: string, isGrace: boolean) => {
+    const newScore = isGrace ? Math.max(0, currentScore - scorePenalty) : currentScore + scoreGain;
     open({
       type:          'repay-confirm',
       loanId,
       amount:        totalDue,
       isGrace,
-      scoreGain:     isGrace ? 0 : 22,
-      currentScore:  628,
-      newScore:      isGrace ? 578 : 650,
+      scoreGain:     isGrace ? 0 : scoreGain,
+      currentScore,
+      newScore,
       creditRestored: totalDue,
       onConfirm: () => {
         transitionTo({ type: 'tx-pending', description: `Repaying Loan #${loanId}`, step: 'signing' });
@@ -39,8 +48,8 @@ export function ActiveLoansPanel({ wallet }: Props) {
           type:        'tx-success',
           description: `Loan #${loanId} repaid · Credit restored`,
           txHash:      '0xdef456abc789',
-          scoreChange: isGrace ? -50 : 22,
-          newScore:    isGrace ? 578 : 650,
+          scoreChange: isGrace ? -scorePenalty : scoreGain,
+          newScore,
           ctaLabel:    'View Reputation',
           ctaHref:     '/reputation',
         }), 4400);

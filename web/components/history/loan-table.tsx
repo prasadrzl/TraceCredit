@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import type { HistoryLoan, HistoryLoanState } from '@/types/history';
 import { useTxModal } from '@/store/tx-modal-store';
+import { useAccount } from 'wagmi';
+import { useWalletScore } from '@/hooks/use-wallet-score';
+import { useProtocolConfig, PROTOCOL_CONFIG_DEFAULTS } from '@/hooks/use-config';
 import { ExternalLink } from 'lucide-react';
 
 const STATE_STYLES: Record<HistoryLoanState, { label: string; bg: string; color: string }> = {
@@ -30,6 +33,12 @@ export function LoanTable({ loans, onLoanClick }: Props) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const { open, transitionTo } = useTxModal();
+  const { address } = useAccount();
+  const { data: scoreData } = useWalletScore(address);
+  const { data: cfg } = useProtocolConfig();
+  const currentScore = scoreData?.score ?? 0;
+  const scoreGain = cfg?.onTimeRepaymentScoreGain ?? PROTOCOL_CONFIG_DEFAULTS.onTimeRepaymentScoreGain;
+  const scorePenalty = cfg?.gracePeriodScoreHit ?? PROTOCOL_CONFIG_DEFAULTS.gracePeriodScoreHit;
 
   const counts = FILTERS.reduce((acc, f) => {
     acc[f.key] = f.key === 'All' ? loans.length : loans.filter(l => l.state === f.key).length;
@@ -47,20 +56,22 @@ export function LoanTable({ loans, onLoanClick }: Props) {
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleRepay = (loan: HistoryLoan) => {
+    const isGrace = loan.state === 'GracePeriod';
+    const newScore = isGrace ? Math.max(0, currentScore - scorePenalty) : currentScore + scoreGain;
     open({
       type: 'repay-confirm',
       loanId: `#${loan.loanNum}`,
       amount: loan.principal,
-      isGrace: loan.state === 'GracePeriod',
-      scoreGain: 22,
-      currentScore: 650,
-      newScore: 672,
+      isGrace,
+      scoreGain: isGrace ? 0 : scoreGain,
+      currentScore,
+      newScore,
       creditRestored: loan.principal,
       onConfirm: () => {
         transitionTo({ type: 'tx-pending', description: `Repaying loan #${loan.loanNum}`, step: 'signing' });
         setTimeout(() => transitionTo({ type: 'tx-pending', description: `Repaying loan #${loan.loanNum}`, step: 'submitted', txHash: '0xrepay123' }), 1200);
         setTimeout(() => transitionTo({ type: 'tx-pending', description: `Repaying loan #${loan.loanNum}`, step: 'confirming', txHash: '0xrepay123' }), 2800);
-        setTimeout(() => transitionTo({ type: 'tx-success', description: `Loan #${loan.loanNum} repaid`, txHash: '0xrepay123', scoreChange: 22, newScore: 672, ctaLabel: 'View history', ctaHref: '/history' }), 4400);
+        setTimeout(() => transitionTo({ type: 'tx-success', description: `Loan #${loan.loanNum} repaid`, txHash: '0xrepay123', scoreChange: isGrace ? -scorePenalty : scoreGain, newScore, ctaLabel: 'View history', ctaHref: '/history' }), 4400);
       },
     });
   };
