@@ -3,14 +3,16 @@
 import { useState } from 'react';
 import { OnboardingShell } from './onboarding-shell';
 import { useTxModal } from '@/store/tx-modal-store';
+import { useProtocolConfig, PROTOCOL_CONFIG_DEFAULTS } from '@/hooks/use-config';
 
 interface Props { onNext: () => void; onBack: () => void }
-
-const STAKE_AMOUNT = 50; // USDC
 
 export function StepSbtStake({ onNext, onBack }: Props) {
   const [approved, setApproved] = useState(false);
   const { open, transitionTo } = useTxModal();
+  const { data: cfg } = useProtocolConfig();
+  const STAKE_AMOUNT = cfg?.sbtStakeUsdc ?? PROTOCOL_CONFIG_DEFAULTS.sbtStakeUsdc;
+  const UNLOCK_DAYS = cfg?.sbtUnlockDays ?? PROTOCOL_CONFIG_DEFAULTS.sbtUnlockDays;
 
   const handleApprove = () => {
     open({
@@ -66,7 +68,7 @@ export function StepSbtStake({ onNext, onBack }: Props) {
           { label: 'Your SBT balance',  value: '$0.00 USDC',    note: '' },
           { label: 'Mint cost',         value: `$${STAKE_AMOUNT} USDC`, note: 'locked, not burned' },
           { label: 'SBT status',        value: 'Permanent',     note: '' },
-          { label: 'Unlock delay',      value: '30 days',       note: 'after minting' },
+          { label: 'Unlock delay',      value: `${UNLOCK_DAYS} days`, note: 'after minting' },
         ].map((row) => (
           <div key={row.label} className="flex items-center justify-between">
             <span className="text-text-secondary" style={{ fontSize: 13 }}>{row.label}</span>
@@ -105,7 +107,7 @@ export function StepSbtStake({ onNext, onBack }: Props) {
       <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: 'var(--warning-subtle)', border: '0.5px solid var(--warning)' }}>
         <span style={{ fontSize: 14 }}>⚠️</span>
         <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-          We warrant the {STAKE_AMOUNT} USDC stake is locked in our stake vault for 30 days.
+          We warrant the {STAKE_AMOUNT} USDC stake is locked in our stake vault for {UNLOCK_DAYS} days.
           It will be fully returned to your wallet after the unlock period. It does not count as collateral.
         </p>
       </div>
