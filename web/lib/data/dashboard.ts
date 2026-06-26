@@ -2,6 +2,7 @@ import { analyticsApi } from '@/lib/api/analytics';
 import { vaultApi }     from '@/lib/api/vault';
 import { yieldApi }     from '@/lib/api/yield';
 import { priceApi }     from '@/lib/api/price';
+import { apiClient }    from '@/lib/api/client';
 import type {
   ProtocolStats, VaultStats, ApyStats, DailyVolume, PriceData,
 } from '@/types/api';
@@ -43,19 +44,22 @@ export async function getUsdcPrice(): Promise<PriceData> {
 
 export async function getAtRiskPositions(): Promise<AtRiskPosition[]> {
   try {
-    return mock.atRiskPositions as AtRiskPosition[];
+    const res = await apiClient.get<AtRiskPosition[]>('/pool/at-risk');
+    return res.data;
   } catch { return []; }
 }
 
 export async function getBorrowersByTier(): Promise<BorrowersByTier> {
   try {
-    return mock.borrowersByTier as BorrowersByTier;
+    const res = await apiClient.get<{ tiers: BorrowersByTier }>('/analytics/score-distribution');
+    return res.data.tiers;
   } catch { return { Diamond: 0, Platinum: 0, Gold: 0, Silver: 0, Bronze: 0 }; }
 }
 
 export async function getProtocolHealth(): Promise<ProtocolHealthStatus[]> {
   try {
-    return mock.protocolHealth as ProtocolHealthStatus[];
+    const res = await apiClient.get<ProtocolHealthStatus[]>('/pool/health');
+    return res.data;
   } catch { return []; }
 }
 

@@ -1,5 +1,6 @@
 import type { LoanDetail, InterestAccrual, LoanRepayment, ScoreImpactDetail } from '@/types/loan-detail';
 import { apiClient } from '@/lib/api/client';
+import { configApi } from '@/lib/api/config';
 // import mock from '../mock/loan-detail.json';
 
 interface ApiLoan {
@@ -8,7 +9,7 @@ interface ApiLoan {
   status: string; isOverdue: boolean;
 }
 
-function mapApiLoan(r: ApiLoan): LoanDetail {
+function mapApiLoan(r: ApiLoan, gracePeriodDays: number): LoanDetail {
   const stateMap: Record<string, LoanDetail['state']> = {
     active: 'Active', grace_period: 'GracePeriod',
     repaid: 'Repaid', defaulted: 'Defaulted', written_off: 'Defaulted',
@@ -30,7 +31,7 @@ function mapApiLoan(r: ApiLoan): LoanDetail {
     principal: principalUsd.toFixed(0),
     outstanding: outstandingUsd.toFixed(2),
     interestRateBps: Number(r.rateBps),
-    gracePeriodDays: 7,
+    gracePeriodDays,
     creditLimit: '5000',
     creditUsed: principalUsd.toFixed(0),
     creditPct: Math.min(100, Math.round((principalUsd / 5000) * 100)),
@@ -61,8 +62,11 @@ function mapToInterestAccrual(r: ApiLoan): InterestAccrual {
 }
 
 export async function getLoanDetail(loanNum: number): Promise<LoanDetail> {
-  const res = await apiClient.get<ApiLoan>(`/positions/loan/${loanNum}`);
-  return mapApiLoan(res.data);
+  const [res, cfg] = await Promise.all([
+    apiClient.get<ApiLoan>(`/positions/loan/${loanNum}`),
+    configApi.getProtocolConfig(),
+  ]);
+  return mapApiLoan(res.data, cfg.gracePeriodDays);
   // } catch { return mock.loan as LoanDetail; }
 }
 
