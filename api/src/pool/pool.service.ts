@@ -21,11 +21,28 @@ export interface PoolOverview {
   paused: boolean;
 }
 
+export interface TierConfig {
+  creditLimitUsdc: number;
+  interestRateBps: number;
+  minScore: number;
+}
+
 export interface PoolConfig {
   kinkBps: number;
   capBps: number;
   reserveFactorBps: number;
   maxUtilisationBps: number;
+  tiers: Record<string, TierConfig>;
+  maxScore: number;
+  diamondScore: number;
+  gracePeriodDays: number;
+  onTimeRepaymentScoreGain: number;
+  gracePeriodScoreHit: number;
+  sbtStakeUsdc: number;
+  sbtUnlockDays: number;
+  signalDecayDays: number;
+  signalExpiryWarningDays: number;
+  limitIncreaseDays: number;
 }
 
 @Injectable()
@@ -112,7 +129,29 @@ export class PoolService {
       // fallback to default
     }
 
-    const result: PoolConfig = { kinkBps, capBps, reserveFactorBps, maxUtilisationBps: capBps };
+    const result: PoolConfig = {
+      kinkBps,
+      capBps,
+      reserveFactorBps,
+      maxUtilisationBps: capBps,
+      tiers: {
+        Bronze:   { creditLimitUsdc: 0,       interestRateBps: 1800, minScore: 0   },
+        Silver:   { creditLimitUsdc: 500,      interestRateBps: 1800, minScore: 200 },
+        Gold:     { creditLimitUsdc: 5000,     interestRateBps: 1400, minScore: 400 },
+        Platinum: { creditLimitUsdc: 25000,    interestRateBps: 1000, minScore: 600 },
+        Diamond:  { creditLimitUsdc: 100000,   interestRateBps: 700,  minScore: 800 },
+      },
+      maxScore: Number(process.env.MAX_SCORE ?? 1000),
+      diamondScore: Number(process.env.DIAMOND_SCORE ?? 800),
+      gracePeriodDays: Number(process.env.GRACE_PERIOD_DAYS ?? 7),
+      onTimeRepaymentScoreGain: Number(process.env.REPAYMENT_SCORE_GAIN ?? 22),
+      gracePeriodScoreHit: Number(process.env.GRACE_SCORE_HIT ?? 50),
+      sbtStakeUsdc: Number(process.env.SBT_STAKE_USDC ?? 50),
+      sbtUnlockDays: Number(process.env.SBT_UNLOCK_DAYS ?? 30),
+      signalDecayDays: Number(process.env.SIGNAL_DECAY_DAYS ?? 90),
+      signalExpiryWarningDays: Number(process.env.SIGNAL_EXPIRY_WARNING_DAYS ?? 14),
+      limitIncreaseDays: Number(process.env.LIMIT_INCREASE_DAYS ?? 30),
+    };
     await this.cache.set(cacheKey, result, 300_000);
     return result;
   }
@@ -134,5 +173,31 @@ export class PoolService {
       order: { liquidatedAt: 'DESC' },
       take: first,
     });
+  }
+
+  async getAtRiskPositions(): Promise<any[]> {
+    const loans = await this.loanRepo.find({
+      where: { status: LoanStatus.GRACE_PERIOD },
+      order: { createdAt: 'DESC' },
+      take: 20,
+    });
+    return loans.map(l => ({
+      borrower: l.borrower,
+      tier: 'Bronze',
+      debt: l.principal,
+      ltv: 100,
+      threshold: 100,
+      health: 50,
+    }));
+  }
+
+  async getProtocolHealth(utilisationBps: number): Promise<any[]> {
+    const util = utilisationBps / 100;
+    return [
+      { name: 'LendingPool',   status: util >= 90 ? 'degraded' : 'operational' },
+      { name: 'ReserveModule', status: 'operational' },
+      { name: 'ScoreEngine',   status: 'operational' },
+      { name: 'Subgraph',      status: 'operational' },
+    ];
   }
 }

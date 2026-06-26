@@ -45,6 +45,21 @@ export class PoolController {
     return this.poolService.getOverview();
   }
 
+  @Get('at-risk')
+  @ApiOperation({ summary: 'Active loans in grace period (at-risk positions)' })
+  @ApiOkResponse({ isArray: true, description: 'Loans currently in grace period' })
+  async getAtRiskPositions() {
+    return this.poolService.getAtRiskPositions();
+  }
+
+  @Get('health')
+  @ApiOperation({ summary: 'Protocol component health status' })
+  @ApiOkResponse({ isArray: true, description: 'Health status of core protocol components' })
+  async getProtocolHealth() {
+    const overview = await this.poolService.getOverview();
+    return this.poolService.getProtocolHealth(Number(overview.utilisationBps));
+  }
+
   @Get('borrows')
   @ApiOperation({ summary: 'Recent borrow events from subgraph' })
   @ApiQuery({

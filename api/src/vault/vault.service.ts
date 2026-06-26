@@ -14,15 +14,12 @@ const VAULT_CACHE_TTL_MS = 60_000;
 
 export interface VaultStats {
   totalAssets: string;
-  totalSupply: string;
-  totalOutstanding: string;
-  totalDeposited: string;
-  utilisationBps: string;
-  utilisationPercent: string;
-  reserveFactor: number;
-  reserveBalance: string;
+  totalShares: string;
+  outstandingLoans: string;
+  utilisationBps: number;
   sharePrice: string;
-  usdcBalance: string;
+  reserveBalance: string;
+  maxUtilisationBps: number;
 }
 
 @Injectable()
@@ -72,15 +69,12 @@ export class VaultService {
 
       const result: VaultStats = {
         totalAssets: ta.toString(),
-        totalSupply: ts.toString(),
-        totalOutstanding: (totalOutstanding as bigint).toString(),
-        totalDeposited: (totalDeposited as bigint).toString(),
-        utilisationBps: utilBps.toString(),
-        utilisationPercent: (Number(utilBps) / 100).toFixed(2),
-        reserveFactor: Number(reserveFactor),
-        reserveBalance: (reserveBalance as bigint).toString(),
+        totalShares: ts.toString(),
+        outstandingLoans: (totalOutstanding as bigint).toString(),
+        utilisationBps: Number(utilBps),
         sharePrice,
-        usdcBalance: (usdcBalance as bigint).toString(),
+        reserveBalance: (reserveBalance as bigint).toString(),
+        maxUtilisationBps: Number(process.env.POOL_CAP_BPS ?? 9000),
       };
       await this.cache.set(cacheKey, result, VAULT_CACHE_TTL_MS);
       return result;
@@ -91,21 +85,18 @@ export class VaultService {
     const stat = await this.poolStatRepo.findOne({ where: {}, order: { snapshottedAt: 'DESC' } });
     const result: VaultStats = {
       totalAssets: stat?.totalValueLocked ?? '0',
-      totalSupply: '0',
-      totalOutstanding: stat?.borrowed ?? '0',
-      totalDeposited: stat?.totalValueLocked ?? '0',
-      utilisationBps: String(stat?.utilisationBps ?? 0),
-      utilisationPercent: ((stat?.utilisationBps ?? 0) / 100).toFixed(2),
-      reserveFactor: 0,
+      totalShares: '0',
+      outstandingLoans: stat?.borrowed ?? '0',
+      utilisationBps: stat?.utilisationBps ?? 0,
       reserveBalance: '0',
       sharePrice: '1000000',
-      usdcBalance: stat?.available ?? '0',
+      maxUtilisationBps: Number(process.env.POOL_CAP_BPS ?? 9000),
     };
     await this.cache.set(cacheKey, result, VAULT_CACHE_TTL_MS);
     return result;
   }
 
-  async getSharesValue(wallet: `0x${string}`): Promise<{ wallet: string; shares: string; assetsValue: string }> {
+  async getSharesValue(wallet: `0x${string}`): Promise<{ wallet: string; shares: string; usdcValue: string }> {
     try {
       const pool = this.contracts.addr.lendingPool;
       const [shares, assetsValue] = await this.chain.publicClient.multicall({
@@ -119,7 +110,7 @@ export class VaultService {
       const sharesAmt = shares as bigint;
       const pricePerShare = assetsValue as bigint;
       const totalValue = (sharesAmt * pricePerShare) / BigInt(1e6);
-      return { wallet, shares: sharesAmt.toString(), assetsValue: totalValue.toString() };
+      return { wallet, shares: sharesAmt.toString(), usdcValue: totalValue.toString() };
     } catch (err: any) {
       this.logger.warn(`getSharesValue on-chain failed, falling back to DB: ${err.message}`, 'VaultService');
     }
@@ -128,7 +119,7 @@ export class VaultService {
     return {
       wallet,
       shares: pos?.shares ?? '0',
-      assetsValue: pos?.currentValue ? String(Math.round(parseFloat(pos.currentValue) * 1e6)) : '0',
+      usdcValue: pos?.currentValue ? String(Math.round(parseFloat(pos.currentValue) * 1e6)) : '0',
     };
   }
 }
