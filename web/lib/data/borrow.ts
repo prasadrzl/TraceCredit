@@ -1,6 +1,7 @@
 import type { BorrowerProfile, ActiveLoan, ScoreSignal } from '@/types/borrow';
 import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
+import { configApi } from '@/lib/api/config';
 import mock from '@/lib/mock/borrow.json';
 
 interface ApiProfile {
@@ -15,19 +16,17 @@ interface ApiLoan {
 interface ApiEvent {
   id: string; signalType: string; signalSub: string; delta: number; occurredAt: string;
 }
-const TIER_CREDIT: Record<string, string> = {
-  Bronze: '0', Silver: '500', Gold: '5000', Platinum: '25000', Diamond: '100000',
-};
-const TIER_RATE: Record<string, number> = {
-  Bronze: 1800, Silver: 1800, Gold: 1400, Platinum: 1000, Diamond: 700,
-};
 
 export async function getBorrowerProfile(wallet: string): Promise<BorrowerProfile> {
   try {
-    const res = await apiClient.get<ApiProfile>(`/score/${wallet}/profile`);
-    const p = res.data;
+    const [profileRes, cfg] = await Promise.all([
+      apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
+      configApi.getProtocolConfig(),
+    ]);
+    const p = profileRes.data;
     const limit = Number(p.creditLimit);
     const used = Number(p.creditUsed);
+    const nextTierCfg = cfg.tiers[p.nextTier ?? ''];
     return {
       wallet, score: p.score, tier: p.tier as Tier,
       creditLimit: (limit * 1e6).toFixed(0), creditUsed: (used * 1e6).toFixed(0),
@@ -36,8 +35,8 @@ export async function getBorrowerProfile(wallet: string): Promise<BorrowerProfil
       rateLimit24h: (Number(p.rateLimit24h) * 1e6).toFixed(0), rateLimitUsed: '0',
       rateLimitResetSec: Math.floor(Date.now() / 1000) + 86400,
       nextTierScore: p.nextTierScore ?? 0, nextTier: (p.nextTier ?? '') as Tier,
-      nextTierCreditLimit: TIER_CREDIT[p.nextTier ?? ''] ?? '0',
-      nextTierRateBps: TIER_RATE[p.nextTier ?? ''] ?? 1800,
+      nextTierCreditLimit: nextTierCfg ? String(nextTierCfg.creditLimitUsdc) : '0',
+      nextTierRateBps: nextTierCfg?.interestRateBps ?? 1800,
       scoreToNextTier: Math.max(0, (p.nextTierScore ?? 0) - p.score),
     };
   } catch {
@@ -47,8 +46,11 @@ export async function getBorrowerProfile(wallet: string): Promise<BorrowerProfil
 
 export async function getActiveLoans(wallet: string): Promise<ActiveLoan[]> {
   try {
-    const res = await apiClient.get<ApiLoan[]>(`/positions/snapshots/${wallet}`);
-    const active = res.data.filter(l => l.status === 'active' || l.status === 'grace_period');
+    const [loansRes, cfg] = await Promise.all([
+      apiClient.get<ApiLoan[]>(`/positions/snapshots/${wallet}`),
+      configApi.getProtocolConfig(),
+    ]);
+    const active = loansRes.data.filter(l => l.status === 'active' || l.status === 'grace_period');
     return active.map(l => {
       const due = new Date(Number(l.dueAt) * 1000);
       const daysLeft = Math.ceil((due.getTime() - Date.now()) / 86_400_000);
@@ -60,7 +62,7 @@ export async function getActiveLoans(wallet: string): Promise<ActiveLoan[]> {
         network: 'Base', principal: principalUsd.toFixed(2), interest: interestUsd.toFixed(2),
         aprBps: l.rateBps, repaid: '0', totalDue: (principalUsd + interestUsd).toFixed(2),
         deadline: due.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-        daysLeft: Math.max(0, daysLeft), gracePeriodDays: 7,
+        daysLeft: Math.max(0, daysLeft), gracePeriodDays: cfg.gracePeriodDays,
         graceExpires: l.status === 'grace_period' ? due.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : undefined,
       };
     });
