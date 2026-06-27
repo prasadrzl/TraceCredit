@@ -2,7 +2,7 @@ import type { DailyVolume } from '@/types/api';
 import type { MarketStats, MarketBorrowEntry, PoolDepthPoint, PoolDepthStats, ScoreBucket, TierDistribution, ScoreDistributionMeta, MarketLiquidationEntry, MarketLiquidationStats } from '@/types/markets';
 import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
-import mock from '@/lib/mock/markets.json';
+// import mock from '@/lib/mock/markets.json';
 
 interface ApiProtocolStats { tvl: string; totalVolumeBorrowed: string; totalVolumeRepaid: string; utilisationBps: string; activeBorrowers: number; totalLiquidations: number; lastUpdated: number; }
 interface ApiVolume { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string; }
@@ -15,7 +15,7 @@ interface ApiScoreDist { buckets: ScoreBucket[]; tiers: TierDistribution; meta: 
 interface ApiApyStats { grossApyBps: string; grossApyPercent: string; netLpApyPercent: string; utilisationBps: string; lpShareBps: number; reserveShareBps: number; }
 
 export async function getMarketStats(): Promise<MarketStats> {
-  try {
+  // try {
     const [statsRes, volRes] = await Promise.all([
       apiClient.get<ApiProtocolStats>('/analytics/protocol'),
       apiClient.get<ApiVolume[]>('/analytics/volume?days=2'),
@@ -33,29 +33,29 @@ export async function getMarketStats(): Promise<MarketStats> {
       borrowVolDeltaBps: prevBorrow > 0 ? Math.round(((borrow24h - prevBorrow) / prevBorrow) * 10000) : 0,
       repayVolDeltaBps: prevRepay > 0 ? Math.round(((repay24h - prevRepay) / prevRepay) * 10000) : 0,
     };
-  } catch { return mock.marketStats as MarketStats; }
+  // } catch { return mock.marketStats as MarketStats; }
 }
 
 export async function getMarketVolume(): Promise<DailyVolume[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiVolume[]>('/analytics/volume?days=7');
     return res.data.map(v => ({ date: v.date, borrowVolume: v.borrowVolume, repayVolume: v.repayVolume, liquidationVolume: v.liquidationVolume }));
-  } catch { return mock.volume7d as DailyVolume[]; }
+  // } catch { return mock.volume7d as DailyVolume[]; }
 }
 
 export async function getRecentBorrows(): Promise<MarketBorrowEntry[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiBorrowEvent[]>('/pool/borrows?first=20');
     return res.data.map(b => ({
       loanId: b.loanId, borrower: b.borrower, tier: 'Bronze' as Tier,
       principal: (Number(b.amount) / 1e6).toFixed(2), aprBps: 1400, state: 'Active' as const,
       deadline: new Date((b.timestamp + 30 * 86400) * 1000).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
     }));
-  } catch { return mock.recentBorrows as MarketBorrowEntry[]; }
+  // } catch { return mock.recentBorrows as MarketBorrowEntry[]; }
 }
 
 export async function getPoolDepthCurve(): Promise<PoolDepthPoint[]> {
-  try {
+  // try {
     const [poolRes, cfgRes, apyRes] = await Promise.all([
       apiClient.get<ApiPoolOverview>('/pool/overview'),
       apiClient.get<ApiPoolConfig>('/pool/config'),
@@ -64,7 +64,6 @@ export async function getPoolDepthCurve(): Promise<PoolDepthPoint[]> {
     const kink = cfgRes.data.kinkBps;
     const cap = cfgRes.data.capBps;
     const grossBps = Math.round(Number(apyRes.data.grossApyPercent) * 100);
-    const currentUtil = Number(poolRes.data.utilisationBps);
 
     return Array.from({ length: 11 }, (_, i) => {
       const utilBps = Math.round((i / 10) * cap);
@@ -77,11 +76,11 @@ export async function getPoolDepthCurve(): Promise<PoolDepthPoint[]> {
         aboveKink: utilBps > kink ? aboveKinkRate : null,
       };
     });
-  } catch { return mock.poolDepthCurve as PoolDepthPoint[]; }
+  // } catch { return mock.poolDepthCurve as PoolDepthPoint[]; }
 }
 
 export async function getPoolDepthStats(): Promise<PoolDepthStats> {
-  try {
+  // try {
     const [poolRes, cfgRes, apyRes] = await Promise.all([
       apiClient.get<ApiPoolOverview>('/pool/overview'),
       apiClient.get<ApiPoolConfig>('/pool/config'),
@@ -99,32 +98,32 @@ export async function getPoolDepthStats(): Promise<PoolDepthStats> {
       capBps: cfgRes.data.capBps,
       reserveFactorBps: cfgRes.data.reserveFactorBps,
     };
-  } catch { return mock.poolDepthStats as PoolDepthStats; }
+  // } catch { return mock.poolDepthStats as PoolDepthStats; }
 }
 
 export async function getScoreDistribution(): Promise<ScoreBucket[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiScoreDist>('/analytics/score-distribution');
     return res.data.buckets;
-  } catch { return mock.scoreDistribution as ScoreBucket[]; }
+  // } catch { return mock.scoreDistribution as ScoreBucket[]; }
 }
 
 export async function getTierDistribution(): Promise<TierDistribution> {
-  try {
+  // try {
     const res = await apiClient.get<ApiScoreDist>('/analytics/score-distribution');
     return res.data.tiers;
-  } catch { return mock.tierDistribution as TierDistribution; }
+  // } catch { return mock.tierDistribution as TierDistribution; }
 }
 
 export async function getScoreDistributionMeta(): Promise<ScoreDistributionMeta> {
-  try {
+  // try {
     const res = await apiClient.get<ApiScoreDist>('/analytics/score-distribution');
     return res.data.meta;
-  } catch { return mock.scoreDistributionMeta as ScoreDistributionMeta; }
+  // } catch { return mock.scoreDistributionMeta as ScoreDistributionMeta; }
 }
 
 export async function getRecentLiquidations(): Promise<MarketLiquidationEntry[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiLiqRecord[]>('/liquidation?limit=10');
     return res.data.map(r => ({
       loanId: r.loanId, borrower: r.borrower, tier: 'Bronze' as Tier,
@@ -132,13 +131,13 @@ export async function getRecentLiquidations(): Promise<MarketLiquidationEntry[]>
       writtenOff: (Number(r.writtenOffAmount) / 1e6).toFixed(2),
       daysAgo: Math.floor((Date.now() - new Date(r.liquidatedAt).getTime()) / 86_400_000),
     }));
-  } catch { return mock.recentLiquidations as MarketLiquidationEntry[]; }
+  // } catch { return mock.recentLiquidations as MarketLiquidationEntry[]; }
 }
 
 export async function getLiquidationStats(): Promise<MarketLiquidationStats> {
-  try {
+  // try {
     const res = await apiClient.get<ApiLiqStats>('/liquidation/stats');
     const s = res.data; const recovered = Number(s.totalRecovered) / 1e6; const writtenOff = Number(s.totalWrittenOff) / 1e6; const total = recovered + writtenOff;
     return { total: s.totalLiquidations, totalRecovered: recovered.toFixed(2), totalWrittenOff: writtenOff.toFixed(2), recoveryRateBps: total > 0 ? Math.round((recovered / total) * 10000) : 0 };
-  } catch { return mock.liquidationStats as MarketLiquidationStats; }
+  // } catch { return mock.liquidationStats as MarketLiquidationStats; }
 }

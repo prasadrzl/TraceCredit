@@ -6,7 +6,7 @@ import type {
 import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
 import { configApi } from '@/lib/api/config';
-import mock from '@/lib/mock/reputation.json';
+// import mock from '@/lib/mock/reputation.json';
 
 interface ApiProfile {
   score: number; tier: string; nextTier: string; nextTierScore: number;
@@ -29,7 +29,7 @@ const SIGNAL_TYPE_MAP: Record<string, RecentEvent['type']> = {
 };
 
 export async function getSbtInfo(wallet: string): Promise<SbtInfo> {
-  try {
+  // try {
     const [profileRes, cfg] = await Promise.all([
       apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
       configApi.getProtocolConfig(),
@@ -46,11 +46,11 @@ export async function getSbtInfo(wallet: string): Promise<SbtInfo> {
       status: p.sbtMinted ? 'Active' : 'Not minted',
       frozen: false,
     };
-  } catch { return mock.sbt as SbtInfo; }
+  // } catch { return mock.sbt as SbtInfo; }
 }
 
 export async function getReputationScore(wallet: string): Promise<ReputationScore> {
-  try {
+  // try {
     const [profileRes, cfg] = await Promise.all([
       apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
       configApi.getProtocolConfig(),
@@ -72,11 +72,11 @@ export async function getReputationScore(wallet: string): Promise<ReputationScor
       rateAtDiamond: diamondTier?.interestRateBps ?? 700,
       limitLockupDays: cfg.limitIncreaseDays,
     };
-  } catch { return mock.reputationScore as ReputationScore; }
+  // } catch { return mock.reputationScore as ReputationScore; }
 }
 
 export async function getCreditSnapshot(wallet: string): Promise<CreditSnapshot> {
-  try {
+  // try {
     const [profileRes, loansRes, cfg] = await Promise.all([
       apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
       apiClient.get<ApiLoan[]>(`/positions/snapshots/${wallet}`),
@@ -106,11 +106,11 @@ export async function getCreditSnapshot(wallet: string): Promise<CreditSnapshot>
         unlockDelay: `${cfg.sbtUnlockDays} days`,
       },
     };
-  } catch { return mock.creditSnapshot as CreditSnapshot; }
+  // } catch { return mock.creditSnapshot as CreditSnapshot; }
 }
 
 export async function getScoreHistory(wallet: string): Promise<ScoreHistoryPoint[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiScoreHistory[]>(`/score/${wallet}/db-history?limit=30`);
     return [...res.data]
       .sort((a, b) => new Date(a.recordedAt).getTime() - new Date(b.recordedAt).getTime())
@@ -118,11 +118,11 @@ export async function getScoreHistory(wallet: string): Promise<ScoreHistoryPoint
         label: new Date(h.recordedAt).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }),
         score: h.score,
       }));
-  } catch { return mock.scoreHistory as ScoreHistoryPoint[]; }
+  // } catch { return mock.scoreHistory as ScoreHistoryPoint[]; }
 }
 
 export async function getScoreStats(wallet: string): Promise<ScoreStats> {
-  try {
+  // try {
     const [historyRes, eventsRes] = await Promise.all([
       apiClient.get<ApiScoreHistory[]>(`/score/${wallet}/db-history?limit=200`),
       apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=200`),
@@ -132,11 +132,11 @@ export async function getScoreStats(wallet: string): Promise<ScoreStats> {
     const change30d = recent.reduce((s, e) => s + e.delta, 0);
     const peakScore = historyRes.data.reduce((max, h) => Math.max(max, h.score), 0);
     return { change30d, peakScore, signalCount: eventsRes.data.length };
-  } catch { return mock.scoreStats as ScoreStats; }
+  // } catch { return mock.scoreStats as ScoreStats; }
 }
 
 export async function getRecentEvents(wallet: string): Promise<RecentEvent[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=20`);
     return res.data.map(e => ({
       id: e.id,
@@ -147,11 +147,11 @@ export async function getRecentEvents(wallet: string): Promise<RecentEvent[]> {
       points: e.delta,
       daysAgo: Math.floor((Date.now() - new Date(e.occurredAt).getTime()) / 86_400_000),
     }));
-  } catch { return mock.recentEvents as RecentEvent[]; }
+  // } catch { return mock.recentEvents as RecentEvent[]; }
 }
 
 export async function getSignalBreakdown(wallet: string): Promise<SignalBreakdownItem[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=200`);
     const groups: Record<string, { type: RecentEvent['type']; label: string; count: number; points: number }> = {};
     for (const e of res.data) {
@@ -163,11 +163,11 @@ export async function getSignalBreakdown(wallet: string): Promise<SignalBreakdow
     return Object.entries(groups).map(([id, g]) => ({
       id, type: g.type, label: g.label, count: g.count, points: g.points,
     }));
-  } catch { return mock.signalBreakdown as SignalBreakdownItem[]; }
+  // } catch { return mock.signalBreakdown as SignalBreakdownItem[]; }
 }
 
 export async function getNetScore(wallet: string): Promise<NetScore> {
-  try {
+  // try {
     const [profileRes, cfg] = await Promise.all([
       apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
       configApi.getProtocolConfig(),
@@ -178,11 +178,11 @@ export async function getNetScore(wallet: string): Promise<NetScore> {
     };
     const tierBonus = tierBonuses[p.tier] ?? 0;
     return { base: p.score - tierBonus, tierBonus, displayed: p.score, netPoints: p.score };
-  } catch { return mock.netScore as NetScore; }
+  // } catch { return mock.netScore as NetScore; }
 }
 
 export async function getAttestationSources(wallet: string): Promise<AttestationSource[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=200`);
     const seen = new Set<string>();
     return res.data
@@ -201,11 +201,11 @@ export async function getAttestationSources(wallet: string): Promise<Attestation
         });
         return acc;
       }, []);
-  } catch { return mock.attestationSources as AttestationSource[]; }
+  // } catch { return mock.attestationSources as AttestationSource[]; }
 }
 
 export async function getSignalDecay(wallet: string): Promise<SignalDecayItem[]> {
-  try {
+  // try {
     const [res, cfg] = await Promise.all([
       apiClient.get<ApiEvent[]>(`/score/${wallet}/events?limit=200`),
       configApi.getProtocolConfig(),
@@ -226,5 +226,5 @@ export async function getSignalDecay(wallet: string): Promise<SignalDecayItem[]>
           expiring: Math.ceil((expiresMs - Date.now()) / 86_400_000) <= cfg.signalExpiryWarningDays,
         };
       });
-  } catch { return mock.signalDecay as SignalDecayItem[]; }
+  // } catch { return mock.signalDecay as SignalDecayItem[]; }
 }

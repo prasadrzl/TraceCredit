@@ -5,7 +5,7 @@ import type {
 } from '@/types/portfolio';
 import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
-import mock from '@/lib/mock/portfolio.json';
+// import mock from '@/lib/mock/portfolio.json';
 
 interface ApiPortfolio {
   wallet: string;
@@ -68,7 +68,7 @@ function mapHistoricalLoan(l: ApiLoan): HistoricalBorrowPosition {
 }
 
 export async function getNetPosition(wallet: string): Promise<NetPosition> {
-  try {
+  // try {
     const res = await apiClient.get<ApiPortfolio>(`/portfolio/${wallet}`);
     const p = res.data;
     const lpValue = Number(p.lpCurrentValue);
@@ -80,11 +80,11 @@ export async function getNetPosition(wallet: string): Promise<NetPosition> {
       lpValue: lpValue.toFixed(2),
       outstandingDebt: debt.toFixed(2),
     };
-  } catch { return mock.netPosition as NetPosition; }
+  // } catch { return mock.netPosition as NetPosition; }
 }
 
 export async function getPositionStats(wallet: string): Promise<PositionStats> {
-  try {
+  // try {
     const res = await apiClient.get<ApiPortfolio>(`/portfolio/${wallet}`);
     const p = res.data;
     const urgentLoans = p.activeLoans.filter(l =>
@@ -110,11 +110,11 @@ export async function getPositionStats(wallet: string): Promise<PositionStats> {
       sbtStakeLocked: '0',
       sbtUnlockDelay: '30 days',
     };
-  } catch { return mock.positionStats as PositionStats; }
+  // } catch { return mock.positionStats as PositionStats; }
 }
 
 export async function getBorrowPositions(wallet: string): Promise<BorrowPositions> {
-  try {
+  // try {
     const res = await apiClient.get<ApiPortfolio>(`/portfolio/${wallet}`);
     const p = res.data;
     return {
@@ -123,11 +123,11 @@ export async function getBorrowPositions(wallet: string): Promise<BorrowPosition
       active: p.activeLoans.map(mapActiveLoan),
       historical: p.historicalLoans.map(mapHistoricalLoan),
     };
-  } catch { return mock.borrowPositions as unknown as BorrowPositions; }
+  // } catch { return mock.borrowPositions as unknown as BorrowPositions; }
 }
 
 export async function getReputationSnapshot(wallet: string): Promise<ReputationSnapshot> {
-  try {
+  // try {
     const res = await apiClient.get<ApiPortfolio>(`/portfolio/${wallet}`);
     const p = res.data;
     const thirtyDaysAgo = Date.now() - 30 * 86_400_000;
@@ -151,11 +151,11 @@ export async function getReputationSnapshot(wallet: string): Promise<ReputationS
       color: signalMap[key]?.color ?? '#64748b',
     }));
     return { score: p.score, tier: p.tier as Tier, change30d, signals };
-  } catch { return mock.reputationSnapshot as ReputationSnapshot; }
+  // } catch { return mock.reputationSnapshot as ReputationSnapshot; }
 }
 
 export async function getRecentActivity(wallet: string): Promise<RecentActivity[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiPortfolio>(`/portfolio/${wallet}`);
     return res.data.recentEvents.map(e => ({
       id: e.id,
@@ -165,11 +165,11 @@ export async function getRecentActivity(wallet: string): Promise<RecentActivity[
       scoreChange: e.delta,
       daysAgo: Math.floor((Date.now() - new Date(e.occurredAt).getTime()) / 86_400_000),
     }));
-  } catch { return mock.recentActivity as RecentActivity[]; }
+  // } catch { return mock.recentActivity as RecentActivity[]; }
 }
 
 export async function getNetPositionChart(wallet: string): Promise<NetPositionChartPoint[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiPortfolio>(`/portfolio/${wallet}`);
     const p = res.data;
     const lpValue = Number(p.lpCurrentValue);
@@ -180,5 +180,5 @@ export async function getNetPositionChart(wallet: string): Promise<NetPositionCh
       debt: i === p.scoreTrend.length - 1 ? debt : debt * 0.9,
       net: lpValue - debt,
     }));
-  } catch { return mock.netPositionChart as NetPositionChartPoint[]; }
+  // } catch { return mock.netPositionChart as NetPositionChartPoint[]; }
 }
