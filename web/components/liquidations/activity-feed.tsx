@@ -1,7 +1,8 @@
 'use client';
 
 import type { LiqActivity } from '@/types/liquidation';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Zap } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Props { activities: LiqActivity[] }
 
@@ -23,6 +24,13 @@ export function LiqActivityFeed({ activities }: Props) {
       </div>
 
       <div className="space-y-3">
+        {activities.length === 0 && (
+          <EmptyState
+            icon={<Zap size={22} />}
+            title="No activity today"
+            description="Liquidation events will appear here as they happen throughout the day."
+          />
+        )}
         {activities.map((a, i) => (
           <div key={i} className="flex items-start gap-3">
             <span className="h-2 w-2 rounded-full mt-1.5 shrink-0 bg-[var(--success)]" />

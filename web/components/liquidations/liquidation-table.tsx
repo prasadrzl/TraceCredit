@@ -4,6 +4,8 @@ import { useState } from 'react';
 import type { LiquidationRecord } from '@/types/liquidation';
 import type { Tier } from '@/types/api';
 import { TierBadge } from '@/components/common/tier-badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ShieldOff } from 'lucide-react';
 
 const PAGE_SIZE = 8;
 type Filter = 'All' | 'Full' | 'Partial';
@@ -73,6 +75,17 @@ export function LiquidationTable({ records }: Props) {
             </tr>
           </thead>
           <tbody>
+            {paged.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center">
+                  <EmptyState
+                    icon={<ShieldOff size={22} />}
+                    title="No liquidations found"
+                    description="No events match your current filter. Try switching to 'All'."
+                  />
+                </td>
+              </tr>
+            )}
             {paged.map(r => (
               <tr key={r.loanNum} className="hover:bg-bg-surface transition-colors" style={{ borderBottom: '0.5px solid var(--border)' }}>
                 <td className="px-3 py-3.5">

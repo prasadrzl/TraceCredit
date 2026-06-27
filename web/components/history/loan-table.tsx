@@ -6,7 +6,8 @@ import { useTxModal } from '@/store/tx-modal-store';
 import { useAccount } from 'wagmi';
 import { useWalletScore } from '@/hooks/use-wallet-score';
 import { useProtocolConfig, PROTOCOL_CONFIG_DEFAULTS } from '@/hooks/use-config';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, ClockArrowUp } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const STATE_STYLES: Record<HistoryLoanState, { label: string; bg: string; color: string }> = {
   Active:      { label: 'Active',       bg: 'var(--success-subtle)',  color: 'var(--success)' },
@@ -130,6 +131,17 @@ export function LoanTable({ loans, onLoanClick }: Props) {
             </tr>
           </thead>
           <tbody>
+            {paged.length === 0 && (
+              <tr>
+                <td colSpan={8} className="text-center">
+                  <EmptyState
+                    icon={<ClockArrowUp size={22} />}
+                    title="No loan history"
+                    description="Your completed, active, and past loans will appear here."
+                  />
+                </td>
+              </tr>
+            )}
             {paged.map(loan => {
               const style = STATE_STYLES[loan.state];
               const isActive = loan.state === 'Active' || loan.state === 'GracePeriod';

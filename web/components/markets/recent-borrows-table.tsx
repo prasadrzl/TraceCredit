@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRecentBorrows } from '@/hooks/use-markets';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { BarChart2 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import type { LoanState } from '@/types/markets';
 
@@ -86,6 +88,12 @@ export function RecentBorrowsTable() {
         <div className="space-y-3">
           {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} className="h-8 bg-bg-surface" />)}
         </div>
+      ) : rows.length === 0 ? (
+        <EmptyState
+          icon={<BarChart2 size={22} />}
+          title="No borrows found"
+          description="Recent protocol borrow activity will appear here. Try switching to 'All'."
+        />
       ) : (
         <div className="divide-y divide-[var(--border-soft)]">
           {rows.map((row) => {
