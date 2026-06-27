@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useProtocolHealth } from '@/hooks/use-dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Server } from 'lucide-react';
 
 const STATUS_CONFIG = {
   operational: { dot: 'bg-[var(--success)]',  label: 'Operational', text: 'text-[var(--success)]'  },
@@ -37,6 +39,12 @@ export function ProtocolHealth() {
             </div>
           ))}
         </div>
+      ) : (data ?? []).length === 0 ? (
+        <EmptyState
+          icon={<Server size={22} />}
+          title="Health data unavailable"
+          description="Protocol component status will appear here once the indexer is running."
+        />
       ) : (
         <div className="space-y-2.5">
           {(data ?? []).map((item) => {

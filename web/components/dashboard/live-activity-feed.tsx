@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Filter } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Filter, Radio } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 import { useActivityStore } from '@/store/activity-store';
 import { cn } from '@/lib/utils/cn';
 import type { ActivityItem } from '@/types/dashboard';
@@ -158,6 +159,13 @@ export function LiveActivityFeed() {
 
       {/* Feed */}
       <div className="divide-y divide-[var(--border-soft)] overflow-y-auto max-h-[520px] -mx-1 px-1">
+        {merged.length === 0 && (
+          <EmptyState
+            icon={<Radio size={22} />}
+            title="Waiting for activity"
+            description="Protocol events — borrows, repayments, liquidations — will stream here in real time."
+          />
+        )}
         {merged.map((item, i) => (
           <ActivityRow
             key={`${item.id}-${tick}`}
