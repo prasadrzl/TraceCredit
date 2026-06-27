@@ -3,6 +3,8 @@
 import { UsdcAmount } from '@/components/common/usdc-amount';
 import { TierBadge } from '@/components/common/tier-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Wallet } from 'lucide-react';
 import { useBorrowPositions } from '@/hooks/use-portfolio';
 import { useTxModal } from '@/store/tx-modal-store';
 import { useWalletScore } from '@/hooks/use-wallet-score';
@@ -79,6 +81,13 @@ export function BorrowPositions({ wallet }: Props) {
             </div>
           )}
 
+          {data.active.length === 0 && (
+            <EmptyState
+              icon={<Wallet size={22} />}
+              title="No open positions"
+              description="Take out a loan on the Borrow screen to see your positions here."
+            />
+          )}
           <div className="space-y-2">
             {data.active.map((loan) => {
               const isGrace = loan.state === 'GracePeriod';

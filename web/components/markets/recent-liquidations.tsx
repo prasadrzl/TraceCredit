@@ -2,6 +2,8 @@
 
 import { useRecentLiquidations, useLiquidationStats } from '@/hooks/use-markets';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { AlertTriangle } from 'lucide-react';
 
 const TIER_COLOURS: Record<string, string> = {
   Diamond:  'var(--tier-diamond)',
@@ -67,6 +69,12 @@ export function RecentLiquidations() {
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-14 bg-bg-surface" />)}
         </div>
+      ) : (items ?? []).length === 0 ? (
+        <EmptyState
+          icon={<AlertTriangle size={22} />}
+          title="No recent liquidations"
+          description="Liquidation events will appear here as positions breach their thresholds."
+        />
       ) : (
         <div className="divide-y divide-[var(--border-soft)]">
           {(items ?? []).map((item) => {

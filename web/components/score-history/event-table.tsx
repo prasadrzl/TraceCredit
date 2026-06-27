@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import type { ScoreEvent, ScoreSignalType } from '@/types/score-history';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const PAGE_SIZE = 8;
 
@@ -88,6 +89,17 @@ export function EventTable({ events }: Props) {
           </tr>
         </thead>
         <tbody>
+          {paged.length === 0 && (
+            <tr>
+              <td colSpan={6} className="text-center">
+                <EmptyState
+                  icon={<Sparkles size={22} />}
+                  title="No score events yet"
+                  description="Repayments, governance votes, and cross-protocol attestations will appear here."
+                />
+              </td>
+            </tr>
+          )}
           {paged.map(event => (
             <>
               <tr
