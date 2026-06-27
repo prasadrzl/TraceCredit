@@ -12,14 +12,11 @@ import { AtRiskPositions }      from '@/components/dashboard/at-risk-positions';
 import { LiveActivityFeed }     from '@/components/dashboard/live-activity-feed';
 import { BorrowersByTier }      from '@/components/dashboard/borrowers-by-tier';
 import { ProtocolHealth }       from '@/components/dashboard/protocol-health';
-import { getMockLastBlock }     from '@/lib/data/dashboard';
-
 function PageHeader() {
   const qc = useQueryClient();
   const [refreshing, setRefreshing] = useState(false);
-  const lastBlock = getMockLastBlock();
-  const [blockAge, setBlockAge] = useState(lastBlock?.ageSeconds ?? 0);
-  const blockNumber = lastBlock?.number?.toLocaleString() ?? '—';
+  const [blockAge, setBlockAge] = useState(0);
+  const blockNumber = '—';
 
   useEffect(() => {
     const id = setInterval(() => setBlockAge((a: number) => a + 1), 1_000);

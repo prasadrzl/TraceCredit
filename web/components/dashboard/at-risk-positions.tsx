@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useAtRiskPositions } from '@/hooks/use-dashboard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
 const TIER_COLOURS: Record<string, string> = {
@@ -65,6 +67,12 @@ export function AtRiskPositions() {
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 bg-bg-surface" />)}
         </div>
+      ) : (data ?? []).length === 0 ? (
+        <EmptyState
+          icon={<ShieldCheck size={22} />}
+          title="All positions healthy"
+          description="No borrowers are near their liquidation threshold right now."
+        />
       ) : (
         <div className="divide-y divide-[var(--border-soft)]">
           {(data ?? []).map((pos) => {

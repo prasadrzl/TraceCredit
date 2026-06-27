@@ -3,6 +3,8 @@
 import { UsdcAmount } from '@/components/common/usdc-amount';
 import { TierBadge } from '@/components/common/tier-badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FileText } from 'lucide-react';
 import { useActiveLoans } from '@/hooks/use-borrow';
 import { useTxModal } from '@/store/tx-modal-store';
 import { useWalletScore } from '@/hooks/use-wallet-score';
@@ -71,7 +73,11 @@ export function ActiveLoansPanel({ wallet }: Props) {
           {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-24 w-full bg-bg-surface" />)}
         </div>
       ) : data.length === 0 ? (
-        <p className="text-text-tertiary py-4 text-center" style={{ fontSize: 13 }}>No active loans</p>
+        <EmptyState
+          icon={<FileText size={22} />}
+          title="No active loans"
+          description="Use your reputation score to borrow USDC. Repay on time to grow your credit limit."
+        />
       ) : (
         <div className="space-y-3">
           {data.map((loan) => {
