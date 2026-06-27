@@ -2,7 +2,7 @@ import type { BorrowerProfile, ActiveLoan, ScoreSignal } from '@/types/borrow';
 import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
 import { configApi } from '@/lib/api/config';
-import mock from '@/lib/mock/borrow.json';
+// import mock from '@/lib/mock/borrow.json';
 
 interface ApiProfile {
   score: number; tier: string; creditLimit: string; creditUsed: string;
@@ -18,7 +18,7 @@ interface ApiEvent {
 }
 
 export async function getBorrowerProfile(wallet: string): Promise<BorrowerProfile> {
-  try {
+  // try {
     const [profileRes, cfg] = await Promise.all([
       apiClient.get<ApiProfile>(`/score/${wallet}/profile`),
       configApi.getProtocolConfig(),
@@ -39,13 +39,13 @@ export async function getBorrowerProfile(wallet: string): Promise<BorrowerProfil
       nextTierRateBps: nextTierCfg?.interestRateBps ?? 1800,
       scoreToNextTier: Math.max(0, (p.nextTierScore ?? 0) - p.score),
     };
-  } catch {
-    return mock.borrowerProfile as BorrowerProfile;
-  }
+  // } catch {
+  //   return mock.borrowerProfile as BorrowerProfile;
+  // }
 }
 
 export async function getActiveLoans(wallet: string): Promise<ActiveLoan[]> {
-  try {
+  // try {
     const [loansRes, cfg] = await Promise.all([
       apiClient.get<ApiLoan[]>(`/positions/snapshots/${wallet}`),
       configApi.getProtocolConfig(),
@@ -66,13 +66,13 @@ export async function getActiveLoans(wallet: string): Promise<ActiveLoan[]> {
         graceExpires: l.status === 'grace_period' ? due.toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : undefined,
       };
     });
-  } catch {
-    return mock.activeLoans as ActiveLoan[];
-  }
+  // } catch {
+  //   return mock.activeLoans as ActiveLoan[];
+  // }
 }
 
 export async function getScoreSignals(wallet: string): Promise<ScoreSignal[]> {
-  try {
+  // try {
     const typeMap: Record<string, ScoreSignal['type']> = {
       ON_TIME_REPAYMENT: 'repayment', PARTIAL_REPAYMENT: 'repayment', LATE_REPAYMENT: 'late',
       DAO_VOTE: 'dao', CROSS_PROTOCOL_REPAYMENT: 'cross', WALLET_AGE: 'wallet',
@@ -84,7 +84,7 @@ export async function getScoreSignals(wallet: string): Promise<ScoreSignal[]> {
       sub: e.signalType, daysAgo: Math.floor((Date.now() - new Date(e.occurredAt).getTime()) / 86_400_000),
       points: e.delta,
     }));
-  } catch {
-    return mock.scoreSignals as ScoreSignal[];
-  }
+  // } catch {
+  //   return mock.scoreSignals as ScoreSignal[];
+  // }
 }

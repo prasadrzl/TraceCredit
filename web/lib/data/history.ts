@@ -1,6 +1,6 @@
 import type { HistorySummary, HistoryLoan, HistoryLoanState } from '@/types/history';
 import { apiClient } from '@/lib/api/client';
-import mock from '../mock/history.json';
+// import mock from '../mock/history.json';
 
 interface ApiLoan { loanId: string; borrower: string; principal: string; accruedInterest: string; dueAt: string; status: string; rateBps: number; createdAt: string; txHash?: string; }
 
@@ -35,15 +35,15 @@ function summaryFromLoans(loans: HistoryLoan[]): HistorySummary {
 }
 
 export async function getHistoryLoans(wallet: string): Promise<HistoryLoan[]> {
-  try {
+  // try {
     const res = await apiClient.get<ApiLoan[]>(`/positions/snapshots/${wallet}`);
     return res.data.map(mapSnapshot);
-  } catch { return mock.loans as HistoryLoan[]; }
+  // } catch { return mock.loans as HistoryLoan[]; }
 }
 
 export async function getHistorySummary(wallet: string): Promise<HistorySummary> {
-  try {
+  // try {
     const loans = await getHistoryLoans(wallet);
     return summaryFromLoans(loans);
-  } catch { return mock.summary as HistorySummary; }
+  // } catch { return mock.summary as HistorySummary; }
 }
