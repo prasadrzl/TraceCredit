@@ -8,8 +8,8 @@ interface ApiProtocolStats { tvl: string; totalVolumeBorrowed: string; totalVolu
 interface ApiVolume { date: string; borrowVolume: string; repayVolume: string; liquidationVolume: string; }
 interface ApiPoolOverview { totalAssets: string; totalOutstanding: string; utilisationBps: string; utilisationPercent: string; }
 interface ApiPoolConfig { kinkBps: number; capBps: number; reserveFactorBps: number; maxUtilisationBps: number; }
-interface ApiBorrowEvent { loanId: string; borrower: string; amount: string; timestamp: number; txHash: string; }
-interface ApiLiqRecord { id: string; loanId: string; borrower: string; recoveredAmount: string; writtenOffAmount: string; txHash: string; liquidatedAt: string; }
+interface ApiBorrowEvent { loanId: string; borrower: string; amount: string; rateBps?: number; tier?: string; score?: number; timestamp: number; txHash: string; }
+interface ApiLiqRecord { id: string; loanId: string; borrower: string; recoveredAmount: string; writtenOffAmount: string; txHash: string; liquidatedAt: string; tier?: string; score?: number; }
 interface ApiLiqStats { totalLiquidations: number; totalRecovered: string; totalWrittenOff: string; }
 interface ApiScoreDist { buckets: ScoreBucket[]; tiers: TierDistribution; meta: ScoreDistributionMeta; }
 interface ApiApyStats { grossApyBps: string; grossApyPercent: string; netLpApyPercent: string; utilisationBps: string; lpShareBps: number; reserveShareBps: number; }
@@ -47,8 +47,11 @@ export async function getRecentBorrows(): Promise<MarketBorrowEntry[]> {
   // try {
     const res = await apiClient.get<ApiBorrowEvent[]>('/pool/borrows?first=20');
     return res.data.map(b => ({
-      loanId: b.loanId, borrower: b.borrower, tier: 'Bronze' as Tier,
-      principal: (Number(b.amount) / 1e6).toFixed(2), aprBps: 1400, state: 'Active' as const,
+      loanId: b.loanId, borrower: b.borrower,
+      tier: (b.tier ?? 'Bronze') as Tier,
+      principal: (Number(b.amount) / 1e6).toFixed(2),
+      aprBps: b.rateBps ?? 1400,
+      state: 'Active' as const,
       deadline: new Date((b.timestamp + 30 * 86400) * 1000).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
     }));
   // } catch { return mock.recentBorrows as MarketBorrowEntry[]; }
@@ -126,7 +129,8 @@ export async function getRecentLiquidations(): Promise<MarketLiquidationEntry[]>
   // try {
     const res = await apiClient.get<ApiLiqRecord[]>('/liquidation?limit=10');
     return res.data.map(r => ({
-      loanId: r.loanId, borrower: r.borrower, tier: 'Bronze' as Tier,
+      loanId: r.loanId, borrower: r.borrower,
+      tier: (r.tier ?? 'Bronze') as Tier,
       recovered: (Number(r.recoveredAmount) / 1e6).toFixed(2),
       writtenOff: (Number(r.writtenOffAmount) / 1e6).toFixed(2),
       daysAgo: Math.floor((Date.now() - new Date(r.liquidatedAt).getTime()) / 86_400_000),

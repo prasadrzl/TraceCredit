@@ -3,7 +3,7 @@ import type { Tier } from '@/types/api';
 import { apiClient } from '@/lib/api/client';
 // import mock from '../mock/liquidation.json';
 
-interface ApiLiquidationRecord { id: string; loanId: string; borrower: string; recoveredAmount: string; writtenOffAmount: string; txHash: string; blockNumber: string; liquidatedAt: string; }
+interface ApiLiquidationRecord { id: string; loanId: string; borrower: string; recoveredAmount: string; writtenOffAmount: string; txHash: string; blockNumber: string; liquidatedAt: string; tier?: string; score?: number; }
 interface ApiLiquidationStats { totalLiquidations: number; totalRecovered: string; totalWrittenOff: string; }
 interface ApiVaultStats { totalAssets: string; reserveBalance: string; outstandingLoans: string; }
 
@@ -13,7 +13,9 @@ function mapApiRecord(r: ApiLiquidationRecord): LiquidationRecord {
   return {
     loanNum: Number(r.loanId), loanTxHash: r.txHash,
     borrowerShort: r.borrower.slice(0, 6) + '…' + r.borrower.slice(-4),
-    borrowerScore: 0, tier: 'Bronze' as Tier, principal: total.toFixed(2),
+    borrowerScore: r.score ?? 0,
+    tier: (r.tier ?? 'Bronze') as Tier,
+    principal: total.toFixed(2),
     recovered: recovered.toFixed(2), writtenOff: writtenOff.toFixed(2),
     recoveryPct: total > 0 ? Math.round((recovered / total) * 100) : 0,
     keeperTxHash: r.txHash,
