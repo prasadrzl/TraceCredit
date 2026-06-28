@@ -1,6 +1,7 @@
 import type { LoanDetail, InterestAccrual, LoanRepayment, ScoreImpactDetail } from '@/types/loan-detail';
 import { apiClient } from '@/lib/api/client';
 import { configApi } from '@/lib/api/config';
+import { PROTOCOL_CONFIG_DEFAULTS } from '@/hooks/use-config';
 // import mock from '../mock/loan-detail.json';
 
 interface ApiLoan {
@@ -9,7 +10,12 @@ interface ApiLoan {
   status: string; isOverdue: boolean;
 }
 
-function mapApiLoan(r: ApiLoan, gracePeriodDays: number): LoanDetail {
+interface ApiProfile {
+  score: number; tier: string; creditLimit: string; creditUsed: string;
+  nextTier: string; nextTierScore: number;
+}
+
+function mapApiLoan(r: ApiLoan, gracePeriodDays: number, profile?: ApiProfile): LoanDetail {
   const stateMap: Record<string, LoanDetail['state']> = {
     active: 'Active', grace_period: 'GracePeriod',
     repaid: 'Repaid', defaulted: 'Defaulted', written_off: 'Defaulted',
@@ -32,9 +38,11 @@ function mapApiLoan(r: ApiLoan, gracePeriodDays: number): LoanDetail {
     outstanding: outstandingUsd.toFixed(2),
     interestRateBps: Number(r.rateBps),
     gracePeriodDays,
-    creditLimit: '5000',
-    creditUsed: principalUsd.toFixed(0),
-    creditPct: Math.min(100, Math.round((principalUsd / 5000) * 100)),
+    creditLimit: profile?.creditLimit ?? '5000',
+    creditUsed: profile?.creditUsed ?? principalUsd.toFixed(0),
+    creditPct: profile?.creditLimit
+      ? Math.min(100, Math.round((Number(profile.creditUsed) / Number(profile.creditLimit)) * 100))
+      : Math.min(100, Math.round((principalUsd / 5000) * 100)),
     openTxHash: '',
     basescanUrl: '',
     requestedAt: openedDate.toLocaleString('en-US', { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
@@ -66,7 +74,13 @@ export async function getLoanDetail(loanNum: number): Promise<LoanDetail> {
     apiClient.get<ApiLoan>(`/positions/loan/${loanNum}`),
     configApi.getProtocolConfig(),
   ]);
-  return mapApiLoan(res.data, cfg.gracePeriodDays);
+  const loan = res.data;
+  let profile: ApiProfile | undefined;
+  try {
+    const profileRes = await apiClient.get<ApiProfile>(`/score/${loan.borrower}/profile`);
+    profile = profileRes.data;
+  } catch { /* profile lookup is best-effort */ }
+  return mapApiLoan(loan, cfg.gracePeriodDays, profile);
   // } catch { return mock.loan as LoanDetail; }
 }
 
@@ -82,8 +96,29 @@ export async function getLoanRepayments(_loanNum: number): Promise<LoanRepayment
   return [];
 }
 
-export async function getLoanScoreImpact(_loanNum: number): Promise<ScoreImpactDetail> {
-  // No score impact endpoint yet
-  // return mock.scoreImpact as ScoreImpactDetail;
-  return { projectedPoints: 0, repaymentNumber: 0, currentScore: 0, currentTier: 'Bronze', currentTierScore: 0, nextTier: 'Silver', nextTierScore: 200, ptsToNextTier: 200 };
+export async function getLoanScoreImpact(loanNum: number): Promise<ScoreImpactDetail> {
+  try {
+    const loanRes = await apiClient.get<ApiLoan>(`/positions/loan/${loanNum}`);
+    const [profileRes, cfgRes] = await Promise.all([
+      apiClient.get<ApiProfile>(`/score/${loanRes.data.borrower}/profile`),
+      configApi.getProtocolConfig(),
+    ]);
+    const p = profileRes.data;
+    const cfg = cfgRes;
+    const scoreGain = cfg.onTimeRepaymentScoreGain ?? PROTOCOL_CONFIG_DEFAULTS.onTimeRepaymentScoreGain;
+    const tierEntry = p.nextTier && cfg.tiers?.[p.nextTier];
+    const nextTierScore = tierEntry ? tierEntry.minScore : p.nextTierScore ?? 200;
+    return {
+      projectedPoints: scoreGain,
+      repaymentNumber: 0,
+      currentScore: p.score,
+      currentTier: p.tier as any,
+      currentTierScore: p.score,
+      nextTier: p.nextTier as any,
+      nextTierScore,
+      ptsToNextTier: Math.max(0, nextTierScore - p.score),
+    };
+  } catch {
+    return { projectedPoints: 0, repaymentNumber: 0, currentScore: 0, currentTier: 'Bronze', currentTierScore: 0, nextTier: 'Silver', nextTierScore: 200, ptsToNextTier: 200 };
+  }
 }

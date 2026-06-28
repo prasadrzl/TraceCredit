@@ -81,10 +81,14 @@ export async function getLpTransactions(_wallet: string): Promise<LpTransaction[
 
 export async function getYieldChart7d(): Promise<YieldDataPoint[]> {
   // try {
-    const res = await apiClient.get<ApiVolume[]>('/analytics/volume?days=7');
-    return res.data.map(v => ({
+    const [volRes, apyRes] = await Promise.all([
+      apiClient.get<ApiVolume[]>('/analytics/volume?days=7'),
+      apiClient.get<ApiApyStats>('/yield/apy'),
+    ]);
+    const annualRate = Math.round(Number(apyRes.data.netLpApyPercent) * 100) / 10_000;
+    return volRes.data.map(v => ({
       date: v.date,
-      dailyYield: (Number(v.borrowVolume) / 1e6 * 0.0047 / 365).toFixed(6),
+      dailyYield: (Number(v.borrowVolume) / 1e6 * annualRate / 365).toFixed(6),
       borrowVolume: (Number(v.borrowVolume) / 1e6).toFixed(2),
     }));
   // } catch { return mock.yieldChart7d as YieldDataPoint[]; }
