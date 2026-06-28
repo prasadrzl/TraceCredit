@@ -6,7 +6,7 @@ export function createProtocolSocket(): Socket {
   if (socket?.connected) return socket;
 
   const base = process.env.NEXT_PUBLIC_WS_URL ?? 'http://localhost:3001';
-  socket = io(`${base}/protocol`, {
+  socket = io(`${base}/ws`, {
     transports: ['websocket'],
     autoConnect: true,
     reconnectionAttempts: 5,
