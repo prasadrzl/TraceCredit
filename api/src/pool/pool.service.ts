@@ -11,6 +11,7 @@ import { LENDING_POOL_ABI, FEE_COLLECTOR_ABI } from '../contracts/abis';
 import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.entity';
 import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 import { PoolStat } from '../database/entities/pool-stat.entity';
+import { BorrowerProfile } from '../database/entities/borrower-profile.entity';
 
 export interface PoolOverview {
   totalAssets: string;
@@ -59,7 +60,18 @@ export class PoolService {
     private readonly liqRepo: Repository<LiquidationRecord>,
     @InjectRepository(PoolStat)
     private readonly poolStatRepo: Repository<PoolStat>,
+    @InjectRepository(BorrowerProfile)
+    private readonly profileRepo: Repository<BorrowerProfile>,
   ) {}
+
+  private async profileMap(wallets: string[]): Promise<Map<string, BorrowerProfile>> {
+    if (wallets.length === 0) return new Map();
+    const unique = [...new Set(wallets.map(w => w.toLowerCase()))];
+    const profiles = await this.profileRepo.createQueryBuilder('p')
+      .where('LOWER(p.wallet) IN (:...wallets)', { wallets: unique })
+      .getMany();
+    return new Map(profiles.map(p => [p.wallet.toLowerCase(), p]));
+  }
 
   async getOverview(): Promise<PoolOverview> {
     const cacheKey = 'pool:overview';
@@ -156,22 +168,45 @@ export class PoolService {
     return result;
   }
 
-  async getRecentBorrows(first = 20): Promise<LoanSnapshot[] | any[]> {
+  async getRecentBorrows(first = 20): Promise<any[]> {
     const graphData = await this.graph.getActiveLoans(first);
     if (graphData.length > 0) return graphData;
-    return this.loanRepo.find({
+    const loans = await this.loanRepo.find({
       where: { status: LoanStatus.ACTIVE },
       order: { createdAt: 'DESC' },
       take: first,
     });
+    const profiles = await this.profileMap(loans.map(l => l.borrower));
+    return loans.map(l => {
+      const p = profiles.get(l.borrower.toLowerCase());
+      return {
+        loanId: l.loanId,
+        borrower: l.borrower,
+        amount: l.principal,
+        rateBps: l.rateBps,
+        tier: p?.tier ?? 'Bronze',
+        score: p?.score ?? 0,
+        timestamp: Math.floor(new Date(l.createdAt).getTime() / 1000),
+        txHash: l.blockNumber ?? '',
+      };
+    });
   }
 
-  async getRecentLiquidations(first = 20): Promise<LiquidationRecord[] | any[]> {
+  async getRecentLiquidations(first = 20): Promise<any[]> {
     const graphData = await this.graph.getLiquidations(first);
     if (graphData.length > 0) return graphData;
-    return this.liqRepo.find({
+    const records = await this.liqRepo.find({
       order: { liquidatedAt: 'DESC' },
       take: first,
+    });
+    const profiles = await this.profileMap(records.map(r => r.borrower));
+    return records.map(r => {
+      const p = profiles.get(r.borrower.toLowerCase());
+      return {
+        ...r,
+        tier: p?.tier ?? 'Bronze',
+        score: p?.score ?? 0,
+      };
     });
   }
 
@@ -181,14 +216,19 @@ export class PoolService {
       order: { createdAt: 'DESC' },
       take: 20,
     });
-    return loans.map(l => ({
-      borrower: l.borrower,
-      tier: 'Bronze',
-      debt: l.principal,
-      ltv: 100,
-      threshold: 100,
-      health: 50,
-    }));
+    const profiles = await this.profileMap(loans.map(l => l.borrower));
+    return loans.map(l => {
+      const p = profiles.get(l.borrower.toLowerCase());
+      return {
+        borrower: l.borrower,
+        tier: p?.tier ?? 'Bronze',
+        score: p?.score ?? 0,
+        debt: l.principal,
+        ltv: 100,
+        threshold: 100,
+        health: 50,
+      };
+    });
   }
 
   async getProtocolHealth(utilisationBps: number): Promise<any[]> {
