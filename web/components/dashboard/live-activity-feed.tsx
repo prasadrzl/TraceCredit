@@ -6,7 +6,6 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { useActivityStore } from '@/store/activity-store';
 import { cn } from '@/lib/utils/cn';
 import type { ActivityItem } from '@/types/dashboard';
-import mock from '@/lib/mock/dashboard.json';
 
 const TYPE_CONFIG = {
   borrow: {
@@ -117,15 +116,7 @@ function ActivityRow({ item, isNew }: { item: ActivityItem; isNew?: boolean }) {
 export function LiveActivityFeed() {
   const wsActivities = useActivityStore((s) => s.activities);
 
-  // seed with mock data on first render; real WS events prepend above
-  const [seedItems] = useState<ActivityItem[]>(
-    () => mock.recentActivity as ActivityItem[]
-  );
-
-  const merged: ActivityItem[] = [
-    ...(wsActivities as unknown as ActivityItem[]),
-    ...seedItems,
-  ].slice(0, 20);
+  const merged: ActivityItem[] = (wsActivities as unknown as ActivityItem[]).slice(0, 20);
 
   const [tick, setTick] = useState(0);
   useEffect(() => {
