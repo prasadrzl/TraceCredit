@@ -11,6 +11,7 @@ import { AppLogger } from '../logger/logger.service';
 import { GraphService } from '../graph/graph.service';
 import { BorrowerProfile } from '../database/entities/borrower-profile.entity';
 import { ScoreEvent } from '../database/entities/score-event.entity';
+import { ProtocolGateway } from '../gateway/gateway.service';
 
 export enum ScoreTier {
   NONE = 'None',
@@ -64,6 +65,7 @@ export class ScoreService {
     private readonly profileRepo: Repository<BorrowerProfile>,
     @InjectRepository(ScoreEvent)
     private readonly eventRepo: Repository<ScoreEvent>,
+    private readonly gateway: ProtocolGateway,
   ) {}
 
   async getWalletScore(wallet: `0x${string}`): Promise<WalletScore> {
@@ -149,6 +151,13 @@ export class ScoreService {
     await this.repo.create({
       ...params,
       recordedAt: new Date(),
+    });
+    this.gateway.emitScoreUpdated({
+      wallet: params.wallet,
+      newScore: params.score,
+      previousScore: params.previousScore,
+      tier: params.tier,
+      timestamp: Date.now(),
     });
   }
 
