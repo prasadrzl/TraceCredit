@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
-import { APP_PIPE } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_PIPE, APP_GUARD } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 // Infrastructure
 import { AppConfigModule } from './config/config.module';
@@ -32,6 +34,7 @@ import { IndexerModule } from './indexer/indexer.module';
 @Module({
   imports: [
     // Infrastructure (order matters — config must be first)
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     AppConfigModule,
     LoggerModule,
     DatabaseModule,
@@ -59,6 +62,8 @@ import { IndexerModule } from './indexer/indexer.module';
     IndexerModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({
