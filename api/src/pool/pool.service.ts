@@ -7,11 +7,49 @@ import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { AppLogger } from '../logger/logger.service';
 import { GraphService } from '../graph/graph.service';
+import { IndexerService } from '../indexer/indexer.service';
 import { LENDING_POOL_ABI, FEE_COLLECTOR_ABI } from '../contracts/abis';
 import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.entity';
 import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 import { PoolStat } from '../database/entities/pool-stat.entity';
 import { BorrowerProfile } from '../database/entities/borrower-profile.entity';
+
+export interface RecentBorrowEvent {
+  loanId: string;
+  borrower: string;
+  amount: string;
+  rateBps: number;
+  tier: string;
+  score: number;
+  timestamp: number;
+  txHash: string;
+}
+
+export interface RecentLiquidationEvent {
+  loanId: string;
+  borrower: string;
+  recoveredAmount: string;
+  writtenOffAmount: string;
+  txHash: string;
+  tier: string;
+  score: number;
+  liquidatedAt: string;
+}
+
+export interface AtRiskPosition {
+  borrower: string;
+  tier: string;
+  score: number;
+  debt: string;
+  ltv: number;
+  threshold: number;
+  health: number;
+}
+
+export interface ProtocolHealthComponent {
+  name: string;
+  status: 'operational' | 'degraded' | 'down';
+}
 
 export interface PoolOverview {
   totalAssets: string;
@@ -53,6 +91,7 @@ export class PoolService {
     private readonly contracts: ContractsService,
     private readonly logger: AppLogger,
     private readonly graph: GraphService,
+    private readonly indexer: IndexerService,
     @Inject(CACHE_MANAGER) private readonly cache: Cache,
     @InjectRepository(LoanSnapshot)
     private readonly loanRepo: Repository<LoanSnapshot>,
@@ -168,9 +207,20 @@ export class PoolService {
     return result;
   }
 
-  async getRecentBorrows(first = 20): Promise<any[]> {
+  async getRecentBorrows(first = 20): Promise<RecentBorrowEvent[]> {
     const graphData = await this.graph.getActiveLoans(first);
-    if (graphData.length > 0) return graphData;
+    if (graphData.length > 0) {
+      return graphData.map(l => ({
+        loanId: l.loanId,
+        borrower: l.borrower,
+        amount: l.principal,
+        rateBps: Number(l.rateBps ?? 0),
+        tier: 'Bronze',
+        score: 0,
+        timestamp: Number(l.dueTime ?? 0),
+        txHash: '',
+      }));
+    }
     const loans = await this.loanRepo.find({
       where: { status: LoanStatus.ACTIVE },
       order: { createdAt: 'DESC' },
@@ -192,9 +242,20 @@ export class PoolService {
     });
   }
 
-  async getRecentLiquidations(first = 20): Promise<any[]> {
+  async getRecentLiquidations(first = 20): Promise<RecentLiquidationEvent[]> {
     const graphData = await this.graph.getLiquidations(first);
-    if (graphData.length > 0) return graphData;
+    if (graphData.length > 0) {
+      return graphData.map(l => ({
+        loanId: l.loanId,
+        borrower: l.borrower,
+        recoveredAmount: l.recoveredAmount ?? '0',
+        writtenOffAmount: '0',
+        txHash: l.txHash ?? '',
+        tier: 'Bronze',
+        score: 0,
+        liquidatedAt: l.timestamp ? new Date(Number(l.timestamp) * 1000).toISOString() : new Date().toISOString(),
+      }));
+    }
     const records = await this.liqRepo.find({
       order: { liquidatedAt: 'DESC' },
       take: first,
@@ -203,14 +264,19 @@ export class PoolService {
     return records.map(r => {
       const p = profiles.get(r.borrower.toLowerCase());
       return {
-        ...r,
+        loanId: r.loanId,
+        borrower: r.borrower,
+        recoveredAmount: r.recoveredAmount,
+        writtenOffAmount: r.writtenOffAmount,
+        txHash: r.txHash,
         tier: p?.tier ?? 'Bronze',
         score: p?.score ?? 0,
+        liquidatedAt: r.liquidatedAt?.toISOString() ?? '',
       };
     });
   }
 
-  async getAtRiskPositions(): Promise<any[]> {
+  async getAtRiskPositions(): Promise<AtRiskPosition[]> {
     const loans = await this.loanRepo.find({
       where: { status: LoanStatus.GRACE_PERIOD },
       order: { createdAt: 'DESC' },
@@ -231,13 +297,29 @@ export class PoolService {
     });
   }
 
-  async getProtocolHealth(utilisationBps: number): Promise<any[]> {
+  async getProtocolHealth(utilisationBps: number): Promise<ProtocolHealthComponent[]> {
     const util = utilisationBps / 100;
+    const subgraphHealthy = await this.indexer.isSubgraphHealthy().catch(() => false);
+
+    const [reserveOk, scoreOk] = await Promise.all([
+      this.chain.publicClient.readContract({
+        address: this.contracts.addr.reserveModule,
+        abi: [{ name: 'reserveBalance', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'uint256' }] }] as const,
+        functionName: 'reserveBalance',
+      }).then(() => true).catch(() => false),
+      this.chain.publicClient.readContract({
+        address: this.contracts.addr.scoreEngine,
+        abi: [{ name: 'getCreditTier', type: 'function', stateMutability: 'view', inputs: [{ name: 'wallet', type: 'address' }], outputs: [{ name: '', type: 'uint8' }] }] as const,
+        functionName: 'getCreditTier',
+        args: ['0x0000000000000000000000000000000000000001'],
+      }).then(() => true).catch(() => false),
+    ]);
+
     return [
       { name: 'LendingPool',   status: util >= 90 ? 'degraded' : 'operational' },
-      { name: 'ReserveModule', status: 'operational' },
-      { name: 'ScoreEngine',   status: 'operational' },
-      { name: 'Subgraph',      status: 'operational' },
+      { name: 'ReserveModule', status: reserveOk ? 'operational' : 'down' },
+      { name: 'ScoreEngine',   status: scoreOk ? 'operational' : 'down' },
+      { name: 'Subgraph',      status: subgraphHealthy ? 'operational' : 'degraded' },
     ];
   }
 }
