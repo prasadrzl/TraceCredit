@@ -87,6 +87,27 @@ export const LENDING_POOL_ABI = [
     ],
     outputs: [],
   },
+  {
+    name: 'LoanCreated',
+    type: 'event',
+    inputs: [
+      { name: 'loanId',    type: 'uint256', indexed: true },
+      { name: 'borrower',  type: 'address', indexed: true },
+      { name: 'principal', type: 'uint256', indexed: false },
+      { name: 'rateBps',   type: 'uint256', indexed: false },
+      { name: 'dueTime',   type: 'uint256', indexed: false },
+    ],
+  },
+  {
+    name: 'LoanRepaid',
+    type: 'event',
+    inputs: [
+      { name: 'loanId',   type: 'uint256', indexed: true },
+      { name: 'borrower', type: 'address', indexed: true },
+      { name: 'amount',   type: 'uint256', indexed: false },
+      { name: 'fully',    type: 'bool',    indexed: false },
+    ],
+  },
 ] as const;
 
 export const REPUTATION_SBT_ABI = [
@@ -117,6 +138,16 @@ export const REPUTATION_SBT_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'wallet', type: 'address' }],
     outputs: [{ name: '', type: 'bool' }],
+  },
+  {
+    name: 'ScoreUpdated',
+    type: 'event',
+    inputs: [
+      { name: 'wallet',        type: 'address', indexed: true },
+      { name: 'previousScore', type: 'uint16',  indexed: false },
+      { name: 'newScore',      type: 'uint16',  indexed: false },
+      { name: 'tier',          type: 'uint8',   indexed: false },
+    ],
   },
 ] as const;
 

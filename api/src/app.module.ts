@@ -27,6 +27,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { LiquidationModule } from './liquidation/liquidation.module';
 import { PortfolioModule } from './portfolio/portfolio.module';
+import { IndexerModule } from './indexer/indexer.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { PortfolioModule } from './portfolio/portfolio.module';
     GatewayModule,
     LiquidationModule,
     PortfolioModule,
+    IndexerModule,
   ],
   providers: [
     {
