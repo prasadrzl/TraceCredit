@@ -15,13 +15,14 @@ import { BorrowerProfile }    from './entities/borrower-profile.entity';
 import { ScoreEvent }         from './entities/score-event.entity';
 import { LpPosition }         from './entities/lp-position.entity';
 import { PoolStat }           from './entities/pool-stat.entity';
+import { IndexerCheckpoint }  from './entities/indexer-checkpoint.entity';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
   entities: [
     LoanSnapshot, LiquidationRecord, ScoreHistory, PriceSnapshot,
-    BorrowerProfile, ScoreEvent, LpPosition, PoolStat,
+    BorrowerProfile, ScoreEvent, LpPosition, PoolStat, IndexerCheckpoint,
   ],
   migrations: [path.join(__dirname, 'migrations', '*.{ts,js}')],
   // synchronize ONLY in development — migrations handle preprod/prod

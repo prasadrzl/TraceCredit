@@ -4,12 +4,14 @@ import {
   Entity,
   Index,
   PrimaryGeneratedColumn,
+  Unique,
 } from 'typeorm';
 
 @Entity('liquidation_records')
 @Index(['loanId'])
 @Index(['borrower'])
-@Index(['txHash'], { unique: true })
+@Index(['txHash'])
+@Unique(['txHash', 'loanId'])
 export class LiquidationRecord {
   @PrimaryGeneratedColumn('uuid')
   id: string;
