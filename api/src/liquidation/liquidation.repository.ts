@@ -34,7 +34,17 @@ export class LiquidationRepository {
 
   async create(data: Partial<LiquidationRecord>): Promise<LiquidationRecord> {
     const rec = this.repo.create({ ...data, borrower: data.borrower?.toLowerCase() });
-    return this.repo.save(rec);
+    await this.repo
+      .createQueryBuilder()
+      .insert()
+      .into(LiquidationRecord)
+      .values(rec)
+      .orUpdate(
+        ['recovered_amount', 'written_off_amount', 'block_number', 'liquidated_at'],
+        ['tx_hash', 'loan_id'],
+      )
+      .execute();
+    return this.repo.findOne({ where: { txHash: rec.txHash, loanId: rec.loanId } }) as Promise<LiquidationRecord>;
   }
 
   /** Single-query aggregate: COUNT + SUM via SQL — no in-memory reduce over 10k rows. */

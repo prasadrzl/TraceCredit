@@ -4,10 +4,10 @@ import { Queue } from 'bull';
 import { parseEventLogs } from 'viem';
 import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
-import { GraphService } from '../graph/graph.service';
 import { LiquidationService } from './liquidation.service';
 import { ProtocolGateway } from '../gateway/gateway.service';
 import { AppLogger } from '../logger/logger.service';
+import { IndexerService } from '../indexer/indexer.service';
 import { QUEUE_LIQUIDATION } from '../queue/queue.module';
 import { LIQUIDATION_MANAGER_ABI } from '../contracts/abis';
 
@@ -20,10 +20,10 @@ export class LiquidationBot implements OnModuleInit, OnModuleDestroy {
     @InjectQueue(QUEUE_LIQUIDATION) private readonly queue: Queue,
     private readonly chain: ChainService,
     private readonly contracts: ContractsService,
-    private readonly graph: GraphService,
     private readonly liquidationService: LiquidationService,
     private readonly gateway: ProtocolGateway,
     private readonly logger: AppLogger,
+    private readonly indexer: IndexerService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -42,6 +42,10 @@ export class LiquidationBot implements OnModuleInit, OnModuleDestroy {
       {
         repeat: { every: BOT_REPEAT_INTERVAL_MS },
         jobId: 'liquidation-keeper',
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5_000 },
+        removeOnComplete: 20,
+        removeOnFail: 50,
       },
     );
 
@@ -61,8 +65,8 @@ export class LiquidationBot implements OnModuleInit, OnModuleDestroy {
 
     try {
       const nowSec = Math.floor(Date.now() / 1000);
-      /** Fetch loans whose dueTime is in the past */
-      const overdueLoans = await this.graph.getOverdueLoans(nowSec);
+      /** Fetch loans whose dueTime is in the past — falls back to DB if subgraph is lagging */
+      const overdueLoans = await this.indexer.getOverdueLoans(nowSec);
 
       if (overdueLoans.length === 0) {
         this.logger.debug('No overdue loans found', 'LiquidationBot');
