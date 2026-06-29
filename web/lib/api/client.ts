@@ -7,7 +7,12 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    if (res.data && typeof res.data === 'object' && 'success' in res.data && 'data' in res.data) {
+      res.data = res.data.data;
+    }
+    return res;
+  },
   (err) => {
     const message = err.response?.data?.message ?? err.message;
     return Promise.reject(new Error(message));
