@@ -13,6 +13,8 @@ import {
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
 import { ChainHealthIndicator } from './chain.health';
+import { RedisHealthIndicator } from './redis.health';
+import { SubgraphHealthIndicator } from './subgraph.health';
 import { HealthCheckResultDto } from './health.dto';
 import { ApiErrorResponse } from '../common/dto/api-response.dto';
 
@@ -25,6 +27,8 @@ export class HealthController {
     private readonly db: TypeOrmHealthIndicator,
     private readonly memory: MemoryHealthIndicator,
     private readonly chain: ChainHealthIndicator,
+    private readonly redis: RedisHealthIndicator,
+    private readonly subgraph: SubgraphHealthIndicator,
   ) {}
 
   @Get()
@@ -36,12 +40,14 @@ export class HealthController {
   })
   @ApiServiceUnavailableResponse({
     type: ApiErrorResponse,
-    description: 'One or more health indicators are down (database, chain RPC, or memory heap)',
+    description: 'One or more health indicators are down (database, chain RPC, Redis, subgraph, or memory heap)',
   })
   check() {
     return this.health.check([
       () => this.db.pingCheck('database'),
       () => this.chain.isHealthy('chain'),
+      () => this.redis.isHealthy('redis'),
+      () => this.subgraph.isHealthy('subgraph'),
       () => this.memory.checkHeap('memory_heap', 512 * 1024 * 1024),
     ]);
   }

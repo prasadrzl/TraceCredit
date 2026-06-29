@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -40,6 +40,8 @@ export class AttestationController {
   @ApiBadRequestResponse({ type: ApiErrorResponse, description: 'Invalid Ethereum address' })
   @ApiNotFoundResponse({ type: ApiErrorResponse, description: 'No attestation history found for this wallet' })
   async getHistory(@Param('wallet', ParseAddressPipe) wallet: `0x${string}`) {
-    return this.attestationService.getAttestationHistory(wallet);
+    const result = await this.attestationService.getAttestationHistory(wallet);
+    if (result.scoreUpdates.length === 0) throw new NotFoundException(`No attestation history found for ${wallet}`);
+    return result;
   }
 }

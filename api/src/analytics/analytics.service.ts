@@ -161,7 +161,11 @@ export class AnalyticsService {
       return result;
     }
 
-    // DB fallback — aggregate loan_snapshots and liquidation_records by calendar day
+    // DB fallback — use separate cache key so stale graph results don't mask DB data
+    const dbCacheKey = `analytics:volume:db:${days}`;
+    const cachedDb = await this.cache.get<DailyVolume[]>(dbCacheKey);
+    if (cachedDb) return cachedDb;
+
     const since = new Date();
     since.setDate(since.getDate() - days);
 
@@ -206,7 +210,7 @@ export class AnalyticsService {
       };
     });
 
-    await this.cache.set(cacheKey, result, ANALYTICS_CACHE_TTL_MS);
+    await this.cache.set(dbCacheKey, result, ANALYTICS_CACHE_TTL_MS);
     return result;
   }
 
