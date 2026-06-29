@@ -244,6 +244,17 @@ export class GraphService implements OnModuleInit {
     }
   }
 
+  /** Returns the latest block number indexed by the subgraph, or null if unreachable. */
+  async getSubgraphBlock(): Promise<number | null> {
+    try {
+      const query = gql`query { _meta { block { number } } }`;
+      const data = await this.client.request<{ _meta: { block: { number: number } } }>(query);
+      return data._meta?.block?.number ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Daily borrow / repay / liquidation volumes for the last N days. */
   async getDailyVolume(days: number): Promise<SubgraphDailyStat[]> {
     try {
