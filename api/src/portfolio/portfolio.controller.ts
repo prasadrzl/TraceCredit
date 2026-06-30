@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiOkResponse, ApiNotFoundResponse } from '@nestjs/swagger';
 import { PortfolioService } from './portfolio.service';
 import { ParseAddressPipe } from '../common/pipes/parse-address.pipe';
@@ -15,6 +15,8 @@ export class PortfolioController {
   @ApiOkResponse({ description: 'Aggregated portfolio data from borrower_profiles, loan_snapshots, lp_positions, score_events' })
   @ApiNotFoundResponse({ description: 'No data found for this wallet' })
   async getPortfolio(@Param('wallet', ParseAddressPipe) wallet: `0x${string}`) {
-    return this.portfolioService.getPortfolio(wallet);
+    const portfolio = await this.portfolioService.getPortfolio(wallet);
+    if (!portfolio) throw new NotFoundException(`No portfolio data found for ${wallet}`);
+    return portfolio;
   }
 }
