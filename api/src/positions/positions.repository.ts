@@ -10,10 +10,12 @@ export class PositionsRepository {
     private readonly repo: Repository<LoanSnapshot>,
   ) {}
 
-  async findByBorrower(borrower: string): Promise<LoanSnapshot[]> {
+  async findByBorrower(borrower: string, limit = 20, skip = 0): Promise<LoanSnapshot[]> {
     return this.repo.find({
       where: { borrower: borrower.toLowerCase() },
       order: { createdAt: 'DESC' },
+      take: limit,
+      skip,
     });
   }
 

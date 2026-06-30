@@ -21,10 +21,12 @@ export class LiquidationRepository {
     return this.repo.find({ order: { liquidatedAt: 'DESC' }, take: limit, skip });
   }
 
-  async findByBorrower(borrower: string): Promise<LiquidationRecord[]> {
+  async findByBorrower(borrower: string, limit = 20, skip = 0): Promise<LiquidationRecord[]> {
     return this.repo.find({
       where: { borrower: borrower.toLowerCase() },
       order: { liquidatedAt: 'DESC' },
+      take: limit,
+      skip,
     });
   }
 
