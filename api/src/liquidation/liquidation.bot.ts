@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 import { parseEventLogs } from 'viem';
+import { ConfigService } from '@nestjs/config';
 import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { LiquidationService } from './liquidation.service';
@@ -24,12 +25,33 @@ export class LiquidationBot implements OnModuleInit, OnModuleDestroy {
     private readonly gateway: ProtocolGateway,
     private readonly logger: AppLogger,
     private readonly indexer: IndexerService,
+    private readonly config: ConfigService,
   ) {}
 
+  private isValidContractAddress(addr: string): boolean {
+    // Reject zero address and Ethereum precompiles (0x01 – 0xff)
+    const n = BigInt(addr);
+    return n > 0xffn;
+  }
+
   async onModuleInit(): Promise<void> {
+    if (this.config.get<string>('KEEPER_ENABLED') === 'false') {
+      this.logger.warn('LiquidationBot: KEEPER_ENABLED=false — keeper disabled', 'LiquidationBot');
+      return;
+    }
+
     if (!this.chain.walletClient) {
       this.logger.warn(
         'LiquidationBot: no wallet client configured — keeper disabled',
+        'LiquidationBot',
+      );
+      return;
+    }
+
+    const lm = this.contracts.addr.liquidationManager;
+    if (!lm || !this.isValidContractAddress(lm)) {
+      this.logger.warn(
+        `LiquidationBot: LIQUIDATION_MANAGER_ADDRESS is not a valid contract (got ${lm}) — keeper disabled`,
         'LiquidationBot',
       );
       return;

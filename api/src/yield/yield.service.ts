@@ -102,6 +102,10 @@ export class YieldService {
   }
 
   async getPendingYield(wallet: `0x${string}`): Promise<PendingYield> {
+    const cacheKey = `yield:pending:${wallet.toLowerCase()}`;
+    const cached = await this.cache.get<PendingYield>(cacheKey);
+    if (cached) return cached;
+
     const apy = await this.getApyStats();
 
     try {
@@ -124,7 +128,9 @@ export class YieldService {
       const usdcValue = (shares * assetsFor1e6Shares) / BigInt(1e6);
       const netApyFraction = parseFloat(apy.netLpApyPercent) / 100;
       const pendingUsdc = BigInt(Math.floor(Number(usdcValue) * netApyFraction * (1 / 365)));
-      return { wallet, shares: shares.toString(), pendingUsdc: pendingUsdc.toString(), apyPercent: apy.netLpApyPercent };
+      const result: PendingYield = { wallet, shares: shares.toString(), pendingUsdc: pendingUsdc.toString(), apyPercent: apy.netLpApyPercent };
+      await this.cache.set(cacheKey, result, 30_000);
+      return result;
     } catch {
       return { wallet, shares: '0', pendingUsdc: '0', apyPercent: apy.netLpApyPercent };
     }

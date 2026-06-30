@@ -97,6 +97,10 @@ export class VaultService {
   }
 
   async getSharesValue(wallet: `0x${string}`): Promise<{ wallet: string; shares: string; usdcValue: string }> {
+    const cacheKey = `vault:shares:${wallet.toLowerCase()}`;
+    const cached = await this.cache.get<{ wallet: string; shares: string; usdcValue: string }>(cacheKey);
+    if (cached) return cached;
+
     try {
       const pool = this.contracts.addr.lendingPool;
       const [shares, assetsValue] = await this.chain.publicClient.multicall({
@@ -110,16 +114,20 @@ export class VaultService {
       const sharesAmt = shares as bigint;
       const pricePerShare = assetsValue as bigint;
       const totalValue = (sharesAmt * pricePerShare) / BigInt(1e6);
-      return { wallet, shares: sharesAmt.toString(), usdcValue: totalValue.toString() };
+      const result = { wallet, shares: sharesAmt.toString(), usdcValue: totalValue.toString() };
+      await this.cache.set(cacheKey, result, 30_000);
+      return result;
     } catch (err: any) {
       this.logger.warn(`getSharesValue on-chain failed, falling back to DB: ${err.message}`, 'VaultService');
     }
 
     const pos = await this.lpRepo.findOne({ where: { wallet: wallet.toLowerCase() } });
-    return {
+    const fallback = {
       wallet,
       shares: pos?.shares ?? '0',
       usdcValue: pos?.currentValue ? String(Math.round(parseFloat(pos.currentValue) * 1e6)) : '0',
     };
+    await this.cache.set(cacheKey, fallback, 30_000);
+    return fallback;
   }
 }

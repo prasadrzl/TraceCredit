@@ -11,6 +11,8 @@ import { IndexerCheckpoint } from '../database/entities/indexer-checkpoint.entit
 import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.entity';
 
+const SUBGRAPH_HEALTH_CACHE_MS = 15_000;
+
 /** Max blocks per getLogs call — stay well under RPC node limits */
 const MAX_BLOCKS_PER_CHUNK = 1_000n;
 
@@ -19,6 +21,8 @@ const MAX_SUBGRAPH_LAG_BLOCKS = 50;
 
 @Injectable()
 export class IndexerService implements OnModuleInit {
+  private subgraphHealthCache: { value: boolean; expiresAt: number } | null = null;
+
   constructor(
     private readonly chain: ChainService,
     private readonly contracts: ContractsService,
@@ -34,6 +38,11 @@ export class IndexerService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    const lp = this.contracts.addr.lendingPool;
+    if (!lp || BigInt(lp) <= 0xffn) {
+      this.logger.warn('IndexerService: contract addresses are placeholders — catch-up skipped', 'IndexerService');
+      return;
+    }
     // Run catch-up non-blocking so it doesn't delay server startup
     this.runCatchUp().catch((err) =>
       this.logger.error(`IndexerService catch-up failed: ${err.message}`, err.stack, 'IndexerService'),
@@ -43,14 +52,20 @@ export class IndexerService implements OnModuleInit {
   // ─── Public: subgraph health ─────────────────────────────────────────────
 
   async isSubgraphHealthy(): Promise<boolean> {
+    const now = Date.now();
+    if (this.subgraphHealthCache && now < this.subgraphHealthCache.expiresAt) {
+      return this.subgraphHealthCache.value;
+    }
     try {
       const [subgraphBlock, currentBlock] = await Promise.all([
         this.graph.getSubgraphBlock(),
         this.chain.getBlockNumber(),
       ]);
-      if (subgraphBlock === null) return false;
-      return Number(currentBlock) - subgraphBlock <= MAX_SUBGRAPH_LAG_BLOCKS;
+      const healthy = subgraphBlock !== null && Number(currentBlock) - subgraphBlock <= MAX_SUBGRAPH_LAG_BLOCKS;
+      this.subgraphHealthCache = { value: healthy, expiresAt: now + SUBGRAPH_HEALTH_CACHE_MS };
+      return healthy;
     } catch {
+      this.subgraphHealthCache = { value: false, expiresAt: now + SUBGRAPH_HEALTH_CACHE_MS };
       return false;
     }
   }

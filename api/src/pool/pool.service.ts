@@ -208,9 +208,13 @@ export class PoolService {
   }
 
   async getRecentBorrows(first = 20): Promise<RecentBorrowEvent[]> {
+    const cacheKey = `pool:recent-borrows:${first}`;
+    const cached = await this.cache.get<RecentBorrowEvent[]>(cacheKey);
+    if (cached) return cached;
+
     const graphData = await this.graph.getActiveLoans(first);
     if (graphData.length > 0) {
-      return graphData.map(l => ({
+      const result = graphData.map(l => ({
         loanId: l.loanId,
         borrower: l.borrower,
         amount: l.principal,
@@ -220,6 +224,8 @@ export class PoolService {
         timestamp: Number(l.dueTime ?? 0),
         txHash: '',
       }));
+      await this.cache.set(cacheKey, result, 30_000);
+      return result;
     }
     const loans = await this.loanRepo.find({
       where: { status: LoanStatus.ACTIVE },
@@ -227,7 +233,7 @@ export class PoolService {
       take: first,
     });
     const profiles = await this.profileMap(loans.map(l => l.borrower));
-    return loans.map(l => {
+    const result = loans.map(l => {
       const p = profiles.get(l.borrower.toLowerCase());
       return {
         loanId: l.loanId,
@@ -240,12 +246,18 @@ export class PoolService {
         txHash: l.blockNumber ?? '',
       };
     });
+    await this.cache.set(cacheKey, result, 30_000);
+    return result;
   }
 
   async getRecentLiquidations(first = 20): Promise<RecentLiquidationEvent[]> {
+    const cacheKey = `pool:recent-liquidations:${first}`;
+    const cached = await this.cache.get<RecentLiquidationEvent[]>(cacheKey);
+    if (cached) return cached;
+
     const graphData = await this.graph.getLiquidations(first);
     if (graphData.length > 0) {
-      return graphData.map(l => ({
+      const result = graphData.map(l => ({
         loanId: l.loanId,
         borrower: l.borrower,
         recoveredAmount: l.recoveredAmount ?? '0',
@@ -255,13 +267,15 @@ export class PoolService {
         score: 0,
         liquidatedAt: l.timestamp ? new Date(Number(l.timestamp) * 1000).toISOString() : new Date().toISOString(),
       }));
+      await this.cache.set(cacheKey, result, 30_000);
+      return result;
     }
     const records = await this.liqRepo.find({
       order: { liquidatedAt: 'DESC' },
       take: first,
     });
     const profiles = await this.profileMap(records.map(r => r.borrower));
-    return records.map(r => {
+    const result = records.map(r => {
       const p = profiles.get(r.borrower.toLowerCase());
       return {
         loanId: r.loanId,
@@ -274,16 +288,22 @@ export class PoolService {
         liquidatedAt: r.liquidatedAt?.toISOString() ?? '',
       };
     });
+    await this.cache.set(cacheKey, result, 30_000);
+    return result;
   }
 
   async getAtRiskPositions(): Promise<AtRiskPosition[]> {
+    const cacheKey = 'pool:at-risk';
+    const cached = await this.cache.get<AtRiskPosition[]>(cacheKey);
+    if (cached) return cached;
+
     const loans = await this.loanRepo.find({
       where: { status: LoanStatus.GRACE_PERIOD },
       order: { createdAt: 'DESC' },
       take: 20,
     });
     const profiles = await this.profileMap(loans.map(l => l.borrower));
-    return loans.map(l => {
+    const result = loans.map(l => {
       const p = profiles.get(l.borrower.toLowerCase());
       return {
         borrower: l.borrower,
@@ -295,9 +315,21 @@ export class PoolService {
         health: 50,
       };
     });
+    await this.cache.set(cacheKey, result, 30_000);
+    return result;
   }
 
   async getProtocolHealth(utilisationBps: number): Promise<ProtocolHealthComponent[]> {
+    const cacheKey = 'pool:protocol-health';
+    const cached = await this.cache.get<ProtocolHealthComponent[]>(cacheKey);
+    if (cached) {
+      // Update LendingPool status from live utilisation (no RPC needed) then return
+      return cached.map(c => c.name === 'LendingPool'
+        ? { ...c, status: utilisationBps / 100 >= 90 ? 'degraded' : 'operational' }
+        : c,
+      );
+    }
+
     const util = utilisationBps / 100;
     const subgraphHealthy = await this.indexer.isSubgraphHealthy().catch(() => false);
 
@@ -315,11 +347,13 @@ export class PoolService {
       }).then(() => true).catch(() => false),
     ]);
 
-    return [
+    const result: ProtocolHealthComponent[] = [
       { name: 'LendingPool',   status: util >= 90 ? 'degraded' : 'operational' },
       { name: 'ReserveModule', status: reserveOk ? 'operational' : 'down' },
       { name: 'ScoreEngine',   status: scoreOk ? 'operational' : 'down' },
       { name: 'Subgraph',      status: subgraphHealthy ? 'operational' : 'degraded' },
     ];
+    await this.cache.set(cacheKey, result, 30_000);
+    return result;
   }
 }
