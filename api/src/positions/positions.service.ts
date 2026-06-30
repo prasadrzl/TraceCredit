@@ -157,8 +157,8 @@ export class PositionsService {
     });
   }
 
-  async getLoanSnapshotsByBorrower(borrower: string): Promise<LoanSnapshot[]> {
-    return this.repo.findByBorrower(borrower);
+  async getLoanSnapshotsByBorrower(borrower: string, limit = 20, skip = 0): Promise<LoanSnapshot[]> {
+    return this.repo.findByBorrower(borrower, limit, skip);
   }
 
   async syncLoanSnapshot(loanId: bigint): Promise<void> {

@@ -26,8 +26,8 @@ export class LiquidationService {
     return this.repo.findAll(limit, 0);
   }
 
-  async getLiquidationsByBorrower(borrower: string): Promise<LiquidationRecord[]> {
-    return this.repo.findByBorrower(borrower);
+  async getLiquidationsByBorrower(borrower: string, limit = 20, skip = 0): Promise<LiquidationRecord[]> {
+    return this.repo.findByBorrower(borrower, limit, skip);
   }
 
   async getLiquidationStats(): Promise<LiquidationStats> {

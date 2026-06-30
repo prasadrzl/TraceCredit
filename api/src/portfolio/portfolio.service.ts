@@ -1,6 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
+const PORTFOLIO_CACHE_TTL_MS = 60_000;
 import { BorrowerProfile } from '../database/entities/borrower-profile.entity';
 import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.entity';
 import { LpPosition } from '../database/entities/lp-position.entity';
@@ -68,6 +72,7 @@ export interface PortfolioScorePoint {
 @Injectable()
 export class PortfolioService {
   constructor(
+    @Inject(CACHE_MANAGER) private readonly cache: Cache,
     @InjectRepository(BorrowerProfile)
     private readonly profileRepo: Repository<BorrowerProfile>,
     @InjectRepository(LoanSnapshot)
@@ -80,7 +85,11 @@ export class PortfolioService {
     private readonly historyRepo: Repository<ScoreHistory>,
   ) {}
 
-  async getPortfolio(wallet: string): Promise<PortfolioSummary> {
+  async getPortfolio(wallet: string): Promise<PortfolioSummary | null> {
+    const cacheKey = `portfolio:${wallet.toLowerCase()}`;
+    const cached = await this.cache.get<PortfolioSummary>(cacheKey);
+    if (cached) return cached;
+
     const w = wallet.toLowerCase();
 
     const [profile, loans, lp, events, history] = await Promise.all([
@@ -90,6 +99,8 @@ export class PortfolioService {
       this.eventRepo.find({ where: { wallet: w }, order: { occurredAt: 'DESC' }, take: 10 }),
       this.historyRepo.find({ where: { wallet: w }, order: { recordedAt: 'DESC' }, take: 30 }),
     ]);
+
+    if (!profile && loans.length === 0) return null;
 
     const activeStatuses = [LoanStatus.ACTIVE, LoanStatus.GRACE_PERIOD];
     const activeLoans = loans.filter(l => activeStatuses.includes(l.status));
@@ -133,7 +144,7 @@ export class PortfolioService {
       ? Math.max(0, Number(profile.creditLimit) - Number(profile.creditUsed)).toFixed(2)
       : '0';
 
-    return {
+    const result: PortfolioSummary = {
       wallet,
       score: profile?.score ?? 0,
       tier: profile?.tier ?? 'Bronze',
@@ -158,5 +169,8 @@ export class PortfolioService {
       recentEvents: events.map(mapEvent),
       scoreTrend,
     };
+
+    await this.cache.set(cacheKey, result, PORTFOLIO_CACHE_TTL_MS);
+    return result;
   }
 }
