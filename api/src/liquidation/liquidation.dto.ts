@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 
 export class LiquidationQueryDto {
   @IsOptional()
@@ -67,6 +68,19 @@ export class LiquidationRecordDto {
     description: 'ISO 8601 timestamp when the liquidation occurred',
   })
   liquidatedAt: string;
+
+  static from(r: LiquidationRecord): LiquidationRecordDto {
+    return {
+      id: r.id,
+      loanId: r.loanId,
+      borrower: r.borrower,
+      recoveredAmount: r.recoveredAmount,
+      writtenOffAmount: r.writtenOffAmount,
+      txHash: r.txHash,
+      blockNumber: r.blockNumber,
+      liquidatedAt: r.liquidatedAt?.toISOString(),
+    };
+  }
 }
 
 export class LiquidationStatsDto {

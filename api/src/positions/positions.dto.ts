@@ -1,5 +1,17 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export class LoanSnapshotDto {
+  @ApiProperty() loanId: string;
+  @ApiProperty() borrower: string;
+  @ApiProperty() principal: string;
+  @ApiProperty() accruedInterest: string;
+  @ApiProperty() dueAt: string;
+  @ApiProperty() status: string;
+  @ApiProperty() rateBps: number;
+  @ApiProperty() blockNumber: string;
+  @ApiProperty() createdAt: string;
+}
+
 export class LoanDto {
   @ApiProperty({
     type: String,

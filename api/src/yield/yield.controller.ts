@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -39,6 +39,8 @@ export class YieldController {
   @ApiBadRequestResponse({ type: ApiErrorResponse, description: 'Invalid Ethereum address' })
   @ApiNotFoundResponse({ type: ApiErrorResponse, description: 'Wallet holds no shares — no yield to estimate' })
   async getPendingYield(@Param('wallet', ParseAddressPipe) wallet: `0x${string}`) {
-    return this.yieldService.getPendingYield(wallet);
+    const result = await this.yieldService.getPendingYield(wallet);
+    if (result.shares === '0') throw new NotFoundException(`Wallet ${wallet} holds no vault shares`);
+    return result;
   }
 }
