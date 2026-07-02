@@ -129,13 +129,16 @@ contract LiquidationManager is ProtocolBase, ILiquidationManager {
         // 2. Freeze credit line for 12 months
         ICreditLineManager(creditLineManager).freeze(loan.borrower);
 
-        // 3. Record bad-debt absorption in the reserve
+        // 3. Reserve covers what it can; remainder is true bad debt written off.
+        uint256 reserveBal  = IReserveModule(reserveModule).reserveBalance();
+        uint256 recovered   = reserveBal >= outstanding ? outstanding : reserveBal;
+        uint256 writtenOff  = outstanding - recovered;
         IReserveModule(reserveModule).absorbLoss(outstanding);
 
         // 4. Finalise loan state → WrittenOff (also reduces pool._totalOutstanding)
         pool.markWrittenOff(loanId);
 
-        emit LoanLiquidated(loanId, loan.borrower, outstanding, 0);
+        emit LoanLiquidated(loanId, loan.borrower, recovered, writtenOff);
     }
 
     // ── Gap ───────────────────────────────────────────────────────────────────

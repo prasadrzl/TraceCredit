@@ -6,9 +6,9 @@ interface ILiquidationManager {
     // ── Events ────────────────────────────────────────────────────────────────
     event LoanLiquidated(
         uint256 indexed loanId,
-        address indexed wallet,
-        uint256 amount,
-        uint256 timestamp
+        address indexed borrower,
+        uint256 recovered,
+        uint256 writtenOff
     );
 
     // ── Errors ────────────────────────────────────────────────────────────────
