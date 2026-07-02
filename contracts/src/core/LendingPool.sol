@@ -252,6 +252,15 @@ contract LendingPool is VaultBase, ILendingPool {
         Loan storage loan = _loans[loanId];
         if (loan.state != LoanState.Defaulted) revert InvalidLoanState();
         loan.state = LoanState.WrittenOff;
+        // Remove written-off principal from utilisation accounting so new
+        // borrows are not blocked by debt that has already been absorbed by
+        // the reserve.
+        uint256 outstanding = loan.principal - loan.repaid;
+        if (_totalOutstanding >= outstanding) {
+            unchecked { _totalOutstanding -= outstanding; }
+        } else {
+            _totalOutstanding = 0;
+        }
         emit LoanWrittenOff(loanId, loan.borrower);
     }
 
