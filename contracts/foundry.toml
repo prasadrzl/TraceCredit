@@ -24,12 +24,16 @@ depth = 20
 call_override = false
 
 [rpc_endpoints]
-mainnet    = "${MAINNET_RPC_URL}"
-arbitrum   = "${ARBITRUM_RPC_URL}"
-base       = "${BASE_RPC_URL}"
-sepolia    = "${SEPOLIA_RPC_URL}"
+mainnet       = "${MAINNET_RPC_URL}"
+op_sepolia    = "${OP_SEPOLIA_RPC_URL}"
+optimism      = "${OPTIMISM_RPC_URL}"
+base          = "${BASE_RPC_URL}"
+arbitrum      = "${ARBITRUM_RPC_URL}"
+sepolia       = "${SEPOLIA_RPC_URL}"
 
 [etherscan]
-mainnet  = { key = "${ETHERSCAN_API_KEY}" }
-arbitrum = { key = "${ARBISCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
-base     = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }
+mainnet      = { key = "${ETHERSCAN_API_KEY}" }
+op_sepolia   = { key = "${OPSCAN_API_KEY}", url = "https://api-sepolia-optimistic.etherscan.io/api" }
+optimism     = { key = "${OPSCAN_API_KEY}", url = "https://api-optimistic.etherscan.io/api" }
+arbitrum     = { key = "${ARBISCAN_API_KEY}", url = "https://api.arbiscan.io/api" }
+base         = { key = "${BASESCAN_API_KEY}", url = "https://api.basescan.org/api" }

@@ -22,7 +22,7 @@ import {ProtocolRegistry} from "../src/modules/ProtocolRegistry.sol";
 import {AttestationBridge} from "../src/oracle/AttestationBridge.sol";
 
 /**
- * @notice Full protocol deployment script for Base Sepolia (and mainnet).
+ * @notice Full protocol deployment script for Optimism Sepolia (and other L2s).
  *
  *  Required env vars:
  *    DEPLOYER_PRIVATE_KEY   — deployer / admin EOA
@@ -34,7 +34,7 @@ import {AttestationBridge} from "../src/oracle/AttestationBridge.sol";
  *
  */
 
-//forge script script/Deploy.s.sol:Deploy  --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast --verify -vvvv
+//forge script script/Deploy.s.sol:Deploy --rpc-url $OP_SEPOLIA_RPC_URL --broadcast --verify --verifier etherscan --etherscan-api-key $OPSCAN_API_KEY -vvvv
 contract Deploy is Script {
     // ── Deployed addresses (populated during run) ─────────────────────────────
     SBTStakeVault public stakeVault;
