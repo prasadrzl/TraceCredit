@@ -60,8 +60,8 @@ export interface TxSuccessPayload {
   txHash: string;
   scoreChange?: number;
   newScore?: number;
-  ctaLabel: string;
-  ctaHref: string;
+  ctaLabel?: string;
+  ctaHref?: string;
 }
 
 export interface TxFailedPayload {
