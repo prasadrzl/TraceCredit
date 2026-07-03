@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useAccount } from 'wagmi';
 import { UsdcAmount } from '@/components/common/usdc-amount';
 import { usePoolStats, useApyBreakdown } from '@/hooks/use-lend';
 import { useTxModal } from '@/store/tx-modal-store';
+import { useDepositWrite, useRedeemWrite } from '@/hooks/use-protocol-write';
 
 interface Props { wallet: string | undefined }
 
@@ -14,7 +16,10 @@ export function DepositWithdrawForm({ wallet }: Props) {
   const [amount, setAmount] = useState('');
   const { data: pool }    = usePoolStats();
   const { data: apy }     = useApyBreakdown();
-  const { open, transitionTo } = useTxModal();
+  const { open } = useTxModal();
+  const { address } = useAccount();
+  const depositWrite = useDepositWrite();
+  const redeemWrite  = useRedeemWrite();
 
   const inputVal   = Number(amount) || 0;
   const sharePriceRaw = Number(pool?.sharePrice ?? '1000000');
@@ -34,16 +39,13 @@ export function DepositWithdrawForm({ wallet }: Props) {
       apyBps:      apy.netLpApyBps,
       sharePrice:  pool.sharePrice,
       onConfirm: () => {
-        transitionTo({ type: 'tx-pending', description: `Depositing $${inputVal.toFixed(2)} USDC`, step: 'signing' });
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Depositing $${inputVal.toFixed(2)} USDC`, step: 'submitted',  txHash: '0xfed123cba456' }), 1200);
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Depositing $${inputVal.toFixed(2)} USDC`, step: 'confirming', txHash: '0xfed123cba456' }), 2800);
-        setTimeout(() => transitionTo({
-          type:        'tx-success',
-          description: `${sharesOut} LP shares minted · Earning ${netApy}% APY`,
-          txHash:      '0xfed123cba456',
-          ctaLabel:    'View LP Position',
-          ctaHref:     '/lend',
-        }), 4400);
+        if (!address) return;
+        depositWrite(
+          BigInt(rawAmount),
+          address,
+          `Depositing $${inputVal.toFixed(2)} USDC`,
+          `${sharesOut} LP shares minted · Earning ${netApy}% APY`,
+        ).catch(() => {});
       },
     });
   };
@@ -58,16 +60,15 @@ export function DepositWithdrawForm({ wallet }: Props) {
       availableLiquidity: String(Math.round(Number(pool.tvl) * (1 - pool.utilisationBps / 10000))),
       utilizationImpactBps: Math.round((inputVal / (Number(pool.tvl) / 1_000_000)) * 10000),
       onConfirm: () => {
-        transitionTo({ type: 'tx-pending', description: `Withdrawing ${inputVal.toFixed(4)} shares`, step: 'signing' });
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Withdrawing ${inputVal.toFixed(4)} shares`, step: 'submitted',  txHash: '0x789xyz012' }), 1200);
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Withdrawing ${inputVal.toFixed(4)} shares`, step: 'confirming', txHash: '0x789xyz012' }), 2800);
-        setTimeout(() => transitionTo({
-          type:        'tx-success',
-          description: `Withdrawal complete · USDC returned to wallet`,
-          txHash:      '0x789xyz012',
-          ctaLabel:    'View Portfolio',
-          ctaHref:     '/portfolio',
-        }), 4400);
+        if (!address) return;
+        // shares have 18 decimals (ERC4626 LP token)
+        const rawShares = BigInt(Math.round(inputVal * 1e18));
+        redeemWrite(
+          rawShares,
+          address,
+          address,
+          `Withdrawing ${inputVal.toFixed(4)} shares`,
+        ).catch(() => {});
       },
     });
   };

@@ -5,13 +5,15 @@ import { UsdcAmount } from '@/components/common/usdc-amount';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBorrowerProfile } from '@/hooks/use-borrow';
 import { useTxModal } from '@/store/tx-modal-store';
+import { useBorrowWrite } from '@/hooks/use-protocol-write';
 
 interface Props { wallet: string }
 
 export function BorrowForm({ wallet }: Props) {
   const { data, isLoading } = useBorrowerProfile(wallet);
   const [amount, setAmount] = useState('');
-  const { open, transitionTo, close } = useTxModal();
+  const { open } = useTxModal();
+  const borrowWrite = useBorrowWrite();
 
   if (isLoading || !data) {
     return (
@@ -40,18 +42,8 @@ export function BorrowForm({ wallet }: Props) {
       score:       data.score,
       scorePreview: data.score,
       tier:        data.tier,
-      onConfirm:   () => {
-        transitionTo({ type: 'tx-pending', description: `Borrowing $${inputVal.toFixed(2)} USDC`, step: 'signing' });
-        // simulate tx flow — replace with real wagmi writeContract call
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Borrowing $${inputVal.toFixed(2)} USDC`, step: 'submitted',  txHash: '0xabc123def456' }), 1200);
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Borrowing $${inputVal.toFixed(2)} USDC`, step: 'confirming', txHash: '0xabc123def456' }), 2800);
-        setTimeout(() => transitionTo({
-          type:        'tx-success',
-          description: `$${inputVal.toFixed(2)} USDC borrowed · Loan opened`,
-          txHash:      '0xabc123def456',
-          ctaLabel:    'View in Portfolio',
-          ctaHref:     '/portfolio',
-        }), 4400);
+      onConfirm: () => {
+        borrowWrite(BigInt(rawAmount), `Borrowing $${inputVal.toFixed(2)} USDC`).catch(() => {});
       },
     });
   };
@@ -101,7 +93,7 @@ export function BorrowForm({ wallet }: Props) {
           </div>
           <div className="flex justify-between">
             <span className="text-text-tertiary" style={{ fontSize: 12 }}>Network</span>
-            <span className="font-mono text-text-primary" style={{ fontSize: 12 }}>Base</span>
+            <span className="font-mono text-text-primary" style={{ fontSize: 12 }}>Optimism</span>
           </div>
         </div>
       )}
