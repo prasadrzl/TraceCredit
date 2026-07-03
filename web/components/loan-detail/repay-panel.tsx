@@ -5,6 +5,7 @@ import { useAccount, useReadContract } from 'wagmi';
 import { formatUnits } from 'viem';
 import type { LoanDetail, InterestAccrual } from '@/types/loan-detail';
 import { useTxModal } from '@/store/tx-modal-store';
+import { useRepayWrite } from '@/hooks/use-protocol-write';
 import { useWalletScore } from '@/hooks/use-wallet-score';
 import { useProtocolConfig, PROTOCOL_CONFIG_DEFAULTS } from '@/hooks/use-config';
 import { wagmiConfig } from '@/lib/wagmi/config';
@@ -22,7 +23,8 @@ interface Props { loan: LoanDetail; interest: InterestAccrual }
 export function RepayPanel({ loan, interest }: Props) {
   const outstanding = parseFloat(loan.outstanding);
   const [amount, setAmount] = useState(outstanding.toFixed(2));
-  const { open, transitionTo } = useTxModal();
+  const { open } = useTxModal();
+  const repayWrite = useRepayWrite();
 
   const { address } = useAccount();
   const { data: scoreData } = useWalletScore(address);
@@ -57,14 +59,12 @@ export function RepayPanel({ loan, interest }: Props) {
       newScore,
       creditRestored: loan.principal,
       onConfirm: () => {
-        transitionTo({ type: 'tx-pending', description: `Repaying loan #${loan.loanNum}`, step: 'signing' });
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Repaying loan #${loan.loanNum}`, step: 'submitted', txHash: '0xrepay123' }), 1200);
-        setTimeout(() => transitionTo({ type: 'tx-pending', description: `Repaying loan #${loan.loanNum}`, step: 'confirming', txHash: '0xrepay123' }), 2800);
-        setTimeout(() => transitionTo({
-          type: 'tx-success', description: `Loan #${loan.loanNum} repaid`, txHash: '0xrepay123',
-          scoreChange: isGrace ? -scorePenalty : scoreGain, newScore,
-          ctaLabel: 'View history', ctaHref: '/history',
-        }), 4400);
+        const rawRepay = BigInt(Math.round(parsed * 1_000_000));
+        repayWrite(
+          BigInt(loan.loanNum),
+          rawRepay,
+          `Repaying loan #${loan.loanNum}`,
+        ).catch(() => {});
       },
     });
   };
@@ -76,7 +76,7 @@ export function RepayPanel({ loan, interest }: Props) {
           <span style={{ fontSize: 12 }}>⊙</span>
           <span className="font-semibold text-text-primary" style={{ fontSize: 14 }}>Repay now</span>
         </div>
-        <span className="text-text-tertiary" style={{ fontSize: 11 }}>USDC · Base</span>
+        <span className="text-text-tertiary" style={{ fontSize: 11 }}>USDC · Optimism</span>
       </div>
 
       <div className="flex items-center gap-2 px-3 py-3 rounded-xl" style={{ background: 'var(--bg-surface)', border: '0.5px solid var(--border)' }}>

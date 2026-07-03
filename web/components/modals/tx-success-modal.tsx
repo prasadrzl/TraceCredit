@@ -1,17 +1,20 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useChainId } from 'wagmi';
 import { ModalShell, ModalBody, ModalRow, ModalDivider, ModalCta } from './modal-shell';
 import type { TxSuccessPayload } from '@/store/tx-modal-store';
+import { getTxUrl } from '@/lib/wagmi/explorer';
 
 interface Props { payload: TxSuccessPayload; onClose: () => void }
 
 export function TxSuccessModal({ payload, onClose }: Props) {
   const router = useRouter();
+  const chainId = useChainId();
 
   const handleCta = () => {
     onClose();
-    router.push(payload.ctaHref);
+    if (payload.ctaHref) router.push(payload.ctaHref);
   };
 
   return (
@@ -60,7 +63,7 @@ export function TxSuccessModal({ payload, onClose }: Props) {
         >
           <span className="text-text-tertiary" style={{ fontSize: 11 }}>Tx hash</span>
           <a
-            href={`https://basescan.org/tx/${payload.txHash}`}
+            href={getTxUrl(chainId, payload.txHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="font-mono hover:underline"
@@ -72,7 +75,7 @@ export function TxSuccessModal({ payload, onClose }: Props) {
 
         {/* CTAs */}
         <div className="flex flex-col gap-2 pt-1">
-          <ModalCta label={payload.ctaLabel} onClick={handleCta} />
+          {payload.ctaLabel && <ModalCta label={payload.ctaLabel} onClick={handleCta} />}
           <ModalCta label="Close" onClick={onClose} variant="ghost" />
         </div>
       </ModalBody>
