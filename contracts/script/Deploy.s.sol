@@ -20,6 +20,7 @@ import {RateLimiter} from "../src/modules/RateLimiter.sol";
 import {EmergencyPause} from "../src/modules/EmergencyPause.sol";
 import {ProtocolRegistry} from "../src/modules/ProtocolRegistry.sol";
 import {AttestationBridge} from "../src/oracle/AttestationBridge.sol";
+import {MockUSDC} from "../src/mocks/MockUSDC.sol";
 
 /**
  * @notice Full protocol deployment script for Optimism Sepolia (and other L2s).
@@ -56,20 +57,30 @@ contract Deploy is Script {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
         address admin = vm.addr(deployerKey);
         address treasury = vm.envAddress("TREASURY_ADDRESS");
-        address usdc = vm.envAddress("USDC_ADDRESS");
         address keeper = vm.envAddress("KEEPER_ADDRESS");
         address attestor = vm.envAddress("ATTESTOR_ADDRESS");
+        // Optional second attestor — required when quorum >= 2
+        address attestor2 = vm.envOr("ATTESTOR_ADDRESS_2", address(0));
         uint8 quorum = uint8(vm.envUint("QUORUM"));
+
+        // Deploy MockUSDC when USDC_ADDRESS is not set (testnet convenience).
+        address usdc = vm.envOr("USDC_ADDRESS", address(0));
+        bool deployedMockUsdc = false;
 
         vm.startBroadcast(deployerKey);
 
+        if (usdc == address(0)) {
+            usdc = address(new MockUSDC());
+            deployedMockUsdc = true;
+        }
+
         _deployProxies(admin, treasury, usdc, quorum);
-        _wireRoles(admin, keeper, attestor);
+        _wireRoles(admin, keeper, attestor, attestor2);
         _registerAddresses(admin);
 
         vm.stopBroadcast();
 
-        _printAddresses();
+        _printAddresses(usdc, deployedMockUsdc);
     }
 
     // ── Step 1: deploy all proxies ────────────────────────────────────────────
@@ -222,7 +233,8 @@ contract Deploy is Script {
     function _wireRoles(
         address admin,
         address keeper,
-        address attestor
+        address attestor,
+        address attestor2
     ) internal {
         // LendingPool module addresses
         pool.setSbtContract(address(sbt));
@@ -261,8 +273,11 @@ contract Deploy is Script {
         liqMgr.grantRole(liqMgr.KEEPER_ROLE(), keeper);
         liqMgr.grantRole(liqMgr.LIQUIDATION_BOT_ROLE(), keeper);
 
-        // AttestationBridge attestor
+        // AttestationBridge attestors (quorum >= 2 requires at least two)
         bridge.grantRole(bridge.ATTESTOR_ROLE(), attestor);
+        if (attestor2 != address(0)) {
+            bridge.grantRole(bridge.ATTESTOR_ROLE(), attestor2);
+        }
 
         // EmergencyPause needs pause/unpause rights
         pool.grantRole(pool.PAUSER_ROLE(), address(epause));
@@ -299,8 +314,13 @@ contract Deploy is Script {
         return address(new ERC1967Proxy(impl, data));
     }
 
-    function _printAddresses() internal view {
+    function _printAddresses(address usdc, bool deployedMockUsdc) internal view {
         console2.log("\n=== TraceCredit Protocol Deployment ===");
+        if (deployedMockUsdc) {
+            console2.log("MockUSDC               :", usdc, " <-- add to .env as USDC_ADDRESS");
+        } else {
+            console2.log("USDC                   :", usdc);
+        }
         console2.log("SBTStakeVault          :", address(stakeVault));
         console2.log("ReputationSBT          :", address(sbt));
         console2.log("InterestAccrualEngine  :", address(iae));

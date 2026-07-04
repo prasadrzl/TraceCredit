@@ -10,11 +10,8 @@ lib/
 .env.local
 .env*.local
 
-# ── Broadcast logs (contain private key usage & tx hashes) ───────────────────
-broadcast/*/31337/
-broadcast/*/1/
-broadcast/*/8453/
-broadcast/*/84532/
+# ── Broadcast logs (contain tx hashes & deployer info) ───────────────────────
+broadcast/
 
 # ── Coverage ──────────────────────────────────────────────────────────────────
 lcov.info
