@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_INTERCEPTOR, APP_PIPE, APP_GUARD } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
@@ -34,7 +35,12 @@ import { IndexerModule } from './indexer/indexer.module';
 @Module({
   imports: [
     // Infrastructure (order matters — config must be first)
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (cfg: ConfigService) => [
+        { ttl: cfg.get<number>('throttle.ttlMs')!, limit: cfg.get<number>('throttle.limit')! },
+      ],
+    }),
     AppConfigModule,
     LoggerModule,
     DatabaseModule,

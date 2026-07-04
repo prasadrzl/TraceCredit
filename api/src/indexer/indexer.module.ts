@@ -8,9 +8,11 @@ import { GatewayModule } from '../gateway/gateway.module';
 import { ChainModule } from '../chain/chain.module';
 import { ContractsModule } from '../contracts/contracts.module';
 import { GraphModule } from '../graph/graph.module';
+import { AppConfigModule } from '../config/config.module';
 
 @Module({
   imports: [
+    AppConfigModule,
     TypeOrmModule.forFeature([IndexerCheckpoint, LiquidationRecord, LoanSnapshot]),
     GatewayModule,
     ChainModule,
