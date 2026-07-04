@@ -35,7 +35,7 @@ export class LiquidationBot implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
-    if (this.config.get<string>('KEEPER_ENABLED') === 'false') {
+    if (!this.config.get<boolean>('keeperEnabled')) {
       this.logger.warn('LiquidationBot: KEEPER_ENABLED=false — keeper disabled', 'LiquidationBot');
       return;
     }

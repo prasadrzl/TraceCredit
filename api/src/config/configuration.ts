@@ -43,4 +43,12 @@ export default () => ({
   liquidationBot: {
     privateKey: process.env.LIQUIDATION_BOT_PRIVATE_KEY ?? '',
   },
+
+  keeperEnabled: process.env.KEEPER_ENABLED !== 'false',
+  indexerEnabled: process.env.INDEXER_ENABLED !== 'false',
+
+  throttle: {
+    ttlMs: parseInt(process.env.THROTTLE_TTL_MS ?? '60000', 10),
+    limit: parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),
+  },
 });
