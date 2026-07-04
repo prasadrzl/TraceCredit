@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { parseAbiItem } from 'viem';
+import { ConfigService } from '@nestjs/config';
 import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { GraphService } from '../graph/graph.service';
@@ -29,6 +30,7 @@ export class IndexerService implements OnModuleInit {
     private readonly graph: GraphService,
     private readonly gateway: ProtocolGateway,
     private readonly logger: AppLogger,
+    private readonly config: ConfigService,
     @InjectRepository(IndexerCheckpoint)
     private readonly checkpointRepo: Repository<IndexerCheckpoint>,
     @InjectRepository(LiquidationRecord)
@@ -38,7 +40,7 @@ export class IndexerService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    if (process.env.INDEXER_ENABLED === 'false') {
+    if (!this.config.get<boolean>('indexerEnabled')) {
       this.logger.log('IndexerService: disabled via INDEXER_ENABLED=false — set to true to enable catch-up', 'IndexerService');
       return;
     }

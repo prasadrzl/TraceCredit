@@ -120,7 +120,7 @@ export class PoolService {
     try {
       const pool = this.contracts.addr.lendingPool;
       const [totalAssets, totalOutstanding, utilisationBps, totalDeposited] =
-        await this.chain.publicClient.multicall({
+        (await this.chain.publicClient.multicall({
           contracts: [
             { address: pool, abi: LENDING_POOL_ABI, functionName: 'totalAssets' },
             { address: pool, abi: LENDING_POOL_ABI, functionName: 'totalOutstanding' },
@@ -128,7 +128,7 @@ export class PoolService {
             { address: pool, abi: LENDING_POOL_ABI, functionName: 'totalDeposited' },
           ],
           allowFailure: false,
-        });
+        } as any)) as unknown as [bigint, bigint, bigint, bigint];
 
       const utilBps = utilisationBps as bigint;
       const result: PoolOverview = {
