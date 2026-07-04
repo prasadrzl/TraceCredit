@@ -382,7 +382,7 @@ export const RATE_LIMITER_ABI = [
     stateMutability: 'view',
     inputs: [{ name: 'wallet', type: 'address' }],
     outputs: [
-      { name: 'used', type: 'uint256' },
+      { name: 'totalBorrowed', type: 'uint256' },
       { name: 'windowStart', type: 'uint40' },
     ],
   },
