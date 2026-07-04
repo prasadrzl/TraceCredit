@@ -38,6 +38,10 @@ export class IndexerService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
+    if (process.env.INDEXER_ENABLED === 'false') {
+      this.logger.log('IndexerService: disabled via INDEXER_ENABLED=false — set to true to enable catch-up', 'IndexerService');
+      return;
+    }
     const lp = this.contracts.addr.lendingPool;
     if (!lp || BigInt(lp) <= 0xffn) {
       this.logger.warn('IndexerService: contract addresses are placeholders — catch-up skipped', 'IndexerService');
