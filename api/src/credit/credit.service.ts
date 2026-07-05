@@ -17,7 +17,7 @@ export interface CreditLine {
   used: string;
   available: string;
   frozen: boolean;
-  lastUpdated: number;
+  lastIncreaseAt: number;
 }
 
 export interface RateLimitStatus {
@@ -55,8 +55,8 @@ export class CreditService {
         allowFailure: false,
       });
 
-      const { limit, used, lastUpdated, frozen } = line as {
-        limit: bigint; used: bigint; lastUpdated: number; frozen: boolean;
+      const { limit, used, lastIncreaseAt, frozen } = line as {
+        limit: bigint; used: bigint; lastIncreaseAt: number; frozen: boolean;
       };
 
       const result: CreditLine = {
@@ -65,7 +65,7 @@ export class CreditService {
         used: used.toString(),
         available: (available as bigint).toString(),
         frozen: Boolean(frozen),
-        lastUpdated: Number(lastUpdated),
+        lastIncreaseAt: Number(lastIncreaseAt),
       };
       await this.cache.set(cacheKey, result, CREDIT_CACHE_TTL_MS);
       return result;
@@ -84,7 +84,7 @@ export class CreditService {
       used: String(Math.round(parseFloat(used) * 1e6)),
       available: String(Math.round(parseFloat(available) * 1e6)),
       frozen: false,
-      lastUpdated: 0,
+      lastIncreaseAt: 0,
     };
     await this.cache.set(cacheKey, result, CREDIT_CACHE_TTL_MS);
     return result;

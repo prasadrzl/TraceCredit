@@ -11,6 +11,26 @@ import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.ent
 
 const POSITIONS_CACHE_TTL_MS = 60_000;
 
+// LoanState enum from ILendingPool: Active=0, GracePeriod=1, Defaulted=2, Repaid=3, WrittenOff=4
+const LOAN_STATE_MAP: Record<number, LoanStatus> = {
+  0: LoanStatus.ACTIVE,
+  1: LoanStatus.GRACE_PERIOD,
+  2: LoanStatus.DEFAULTED,
+  3: LoanStatus.REPAID,
+  4: LoanStatus.WRITTEN_OFF,
+};
+
+interface LoanStruct {
+  borrower:        string;
+  principal:       bigint;
+  interestRateBps: bigint;
+  startTime:       bigint; // block.number at origination
+  deadline:        bigint; // block.timestamp + LOAN_DURATION
+  repaid:          bigint;
+  accruedInterest: bigint;
+  state:           number; // LoanState enum
+}
+
 export interface LoanDetail {
   loanId: string;
   borrower: string;
@@ -43,7 +63,7 @@ export class PositionsService {
     const pool = this.contracts.addr.lendingPool;
     const iae = this.contracts.addr.interestAccrualEngine;
 
-    let loanRaw: { borrower: string; principal: bigint; rateBps: bigint; startTime: bigint; dueTime: bigint; status: number } | null = null;
+    let loanRaw: LoanStruct | null = null;
 
     try {
       loanRaw = await this.chain.publicClient.readContract({
@@ -51,7 +71,7 @@ export class PositionsService {
         abi: LENDING_POOL_ABI,
         functionName: 'getLoan',
         args: [loanId],
-      }) as typeof loanRaw;
+      }) as LoanStruct;
     } catch (err: any) {
       this.logger.warn(`getLoan on-chain failed for ${loanId}: ${err.message}`, 'PositionsService');
     }
@@ -76,30 +96,27 @@ export class PositionsService {
       return result;
     }
 
-    const nowSec = BigInt(Math.floor(Date.now() / 1000));
-    const elapsed = nowSec > loanRaw.startTime ? nowSec - loanRaw.startTime : 0n;
-
-    let accruedInterest = 0n;
-    if (elapsed > 0n && loanRaw.principal > 0n) {
+    // startTime is block.number; calcAccrued expects elapsedBlocks
+    let accruedInterest = loanRaw.accruedInterest; // use on-chain value directly
+    if (loanRaw.state === 0 /* Active */ && loanRaw.principal > 0n) {
       try {
-        accruedInterest = await this.chain.publicClient.readContract({
-          address: iae,
-          abi: INTEREST_ACCRUAL_ENGINE_ABI,
-          functionName: 'calcAccrued',
-          args: [loanRaw.principal, loanRaw.rateBps, elapsed],
-        }) as bigint;
+        const currentBlock = await this.chain.getBlockNumber();
+        const elapsedBlocks = currentBlock > loanRaw.startTime ? currentBlock - loanRaw.startTime : 0n;
+        if (elapsedBlocks > 0n) {
+          accruedInterest = await this.chain.publicClient.readContract({
+            address: iae,
+            abi: INTEREST_ACCRUAL_ENGINE_ABI,
+            functionName: 'calcAccrued',
+            args: [loanRaw.principal, loanRaw.interestRateBps, elapsedBlocks],
+          }) as bigint;
+        }
       } catch (err: any) {
         this.logger.warn(`calcAccrued failed for loan ${loanId}: ${err.message}`, 'PositionsService');
       }
     }
 
-    const statusMap: Record<number, string> = {
-      0: LoanStatus.ACTIVE,
-      1: LoanStatus.REPAID,
-      2: LoanStatus.GRACE_PERIOD,
-      3: LoanStatus.DEFAULTED,
-      4: LoanStatus.WRITTEN_OFF,
-    };
+    const status = LOAN_STATE_MAP[loanRaw.state] ?? LoanStatus.ACTIVE;
+    const nowSec = Math.floor(Date.now() / 1000);
 
     const result: LoanDetail = {
       loanId: loanId.toString(),
@@ -107,11 +124,11 @@ export class PositionsService {
       principal: loanRaw.principal.toString(),
       accruedInterest: accruedInterest.toString(),
       totalOwed: (loanRaw.principal + accruedInterest).toString(),
-      rateBps: loanRaw.rateBps.toString(),
+      rateBps: loanRaw.interestRateBps.toString(),
       startTime: Number(loanRaw.startTime),
-      dueTime: Number(loanRaw.dueTime),
-      status: statusMap[loanRaw.status] ?? 'unknown',
-      isOverdue: Number(loanRaw.dueTime) < Math.floor(Date.now() / 1000) && loanRaw.status === 0,
+      dueTime: Number(loanRaw.deadline),
+      status,
+      isOverdue: Number(loanRaw.deadline) < nowSec && loanRaw.state === 0,
     };
 
     await this.cache.set(cacheKey, result, POSITIONS_CACHE_TTL_MS);
