@@ -2,23 +2,61 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { parseAbiItem } from 'viem';
-import { ConfigService } from '@nestjs/config';
 import { ChainService } from '../chain/chain.service';
 import { ContractsService } from '../contracts/contracts.service';
 import { GraphService } from '../graph/graph.service';
 import { AppLogger } from '../logger/logger.service';
 import { ProtocolGateway } from '../gateway/gateway.service';
+import { LENDING_POOL_ABI } from '../contracts/abis';
 import { IndexerCheckpoint } from '../database/entities/indexer-checkpoint.entity';
 import { LiquidationRecord } from '../database/entities/liquidation-record.entity';
 import { LoanSnapshot, LoanStatus } from '../database/entities/loan-snapshot.entity';
+import { ScoreHistory } from '../database/entities/score-history.entity';
+import { ScoreEvent, ScoreSignalType } from '../database/entities/score-event.entity';
+import { BorrowerProfile } from '../database/entities/borrower-profile.entity';
 
 const SUBGRAPH_HEALTH_CACHE_MS = 15_000;
-
-/** Max blocks per getLogs call — stay well under RPC node limits */
 const MAX_BLOCKS_PER_CHUNK = 1_000n;
-
-/** How many blocks behind the subgraph can be before we fall back to RPC getLogs */
 const MAX_SUBGRAPH_LAG_BLOCKS = 50;
+
+// ScoreEngine.SignalType enum order from IScoreEngine.sol
+const SIGNAL_TYPE_NAMES: Record<number, ScoreSignalType> = {
+  0: ScoreSignalType.ON_TIME_REPAYMENT,
+  1: ScoreSignalType.CROSS_PROTOCOL_REPAYMENT,
+  2: ScoreSignalType.WALLET_AGE,
+  3: ScoreSignalType.DAO_VOTE,
+  4: ScoreSignalType.ATTESTATION_RECEIVED, // TOKEN_HOLDING
+  5: ScoreSignalType.ATTESTATION_RECEIVED, // SBT_STAKE
+  6: ScoreSignalType.LATE_REPAYMENT,       // DEFAULT (penalty)
+  7: ScoreSignalType.LATE_REPAYMENT,
+  8: ScoreSignalType.LATE_REPAYMENT,       // WASH_CYCLE
+};
+
+const SIGNAL_LABEL: Record<number, string> = {
+  0: 'On-time repayment', 1: 'Cross-protocol repayment', 2: 'Wallet age',
+  3: 'DAO vote', 4: 'Token holding', 5: 'SBT stake',
+  6: 'Default', 7: 'Late repayment', 8: 'Wash cycle',
+};
+
+const SIGNAL_SOURCE_TYPE: Record<number, string> = {
+  0: 'Repayment', 1: 'Cross-protocol', 2: 'Identity', 3: 'Governance',
+  4: 'Passive', 5: 'Identity', 6: 'Penalty', 7: 'Repayment', 8: 'Penalty',
+};
+
+// ScoreEngine tier thresholds (from ScoreEngine.sol constants)
+function scoreToTier(score: number): string {
+  if (score >= 801) return 'Diamond';
+  if (score >= 601) return 'Platinum';
+  if (score >= 401) return 'Gold';
+  if (score >= 201) return 'Silver';
+  return 'Bronze';
+}
+
+interface LoanStruct {
+  borrower: string; principal: bigint; interestRateBps: bigint;
+  startTime: bigint; deadline: bigint; repaid: bigint;
+  accruedInterest: bigint; state: number;
+}
 
 @Injectable()
 export class IndexerService implements OnModuleInit {
@@ -30,17 +68,22 @@ export class IndexerService implements OnModuleInit {
     private readonly graph: GraphService,
     private readonly gateway: ProtocolGateway,
     private readonly logger: AppLogger,
-    private readonly config: ConfigService,
     @InjectRepository(IndexerCheckpoint)
     private readonly checkpointRepo: Repository<IndexerCheckpoint>,
     @InjectRepository(LiquidationRecord)
     private readonly liqRepo: Repository<LiquidationRecord>,
     @InjectRepository(LoanSnapshot)
     private readonly loanRepo: Repository<LoanSnapshot>,
+    @InjectRepository(ScoreHistory)
+    private readonly scoreHistoryRepo: Repository<ScoreHistory>,
+    @InjectRepository(ScoreEvent)
+    private readonly scoreEventRepo: Repository<ScoreEvent>,
+    @InjectRepository(BorrowerProfile)
+    private readonly profileRepo: Repository<BorrowerProfile>,
   ) {}
 
   async onModuleInit(): Promise<void> {
-    if (!this.config.get<boolean>('indexerEnabled')) {
+    if (process.env.INDEXER_ENABLED === 'false') {
       this.logger.log('IndexerService: disabled via INDEXER_ENABLED=false — set to true to enable catch-up', 'IndexerService');
       return;
     }
@@ -49,7 +92,6 @@ export class IndexerService implements OnModuleInit {
       this.logger.warn('IndexerService: contract addresses are placeholders — catch-up skipped', 'IndexerService');
       return;
     }
-    // Run catch-up non-blocking so it doesn't delay server startup
     this.runCatchUp().catch((err) =>
       this.logger.error(`IndexerService catch-up failed: ${err.message}`, err.stack, 'IndexerService'),
     );
@@ -76,25 +118,26 @@ export class IndexerService implements OnModuleInit {
     }
   }
 
-  // ─── Public: safe overdue-loan query with RPC fallback ───────────────────
+  // ─── Public: overdue-loan query with subgraph/DB fallback ────────────────
 
-  /**
-   * Used by LiquidationBot instead of graph.getOverdueLoans() directly.
-   * Falls back to DB query when the subgraph is lagging or down.
-   */
   async getOverdueLoans(nowUnix: number): Promise<{ loanId: string; borrower: string; principal: string }[]> {
     const healthy = await this.isSubgraphHealthy();
-
     if (healthy) {
       const loans = await this.graph.getOverdueLoans(nowUnix);
       if (loans.length > 0 || !(await this.shouldFallback())) return loans;
     }
-
     this.logger.warn('Subgraph unhealthy or lagging — falling back to DB for overdue loans', 'IndexerService');
     return this.getOverdueLoansFromDb(nowUnix);
   }
 
-  // ─── Catch-up orchestrator ────────────────────────────────────────────────
+  // ─── Public: SBT wallet list for decay sweep ─────────────────────────────
+
+  async getSbtWallets(): Promise<string[]> {
+    const profiles = await this.profileRepo.find({ where: { sbtMinted: true }, select: ['wallet'] });
+    return profiles.map((p) => p.wallet);
+  }
+
+  // ─── Catch-up orchestrator ───────────────────────────────────────────────
 
   private async runCatchUp(): Promise<void> {
     let currentBlock: bigint;
@@ -108,20 +151,43 @@ export class IndexerService implements OnModuleInit {
     const addr = this.contracts.addr;
 
     await Promise.all([
+      // ── LendingPool ───────────────────────────────────────────────────────
       this.catchUpStream({
         streamKey: 'lendingPool:LoanCreated',
         address: addr.lendingPool,
-        eventSignature: 'event LoanCreated(uint256 indexed loanId, address indexed borrower, uint256 principal, uint256 rateBps, uint256 dueTime)',
+        eventSignature: 'event LoanCreated(uint256 indexed loanId, address indexed borrower, uint256 amount, uint256 deadline)',
         currentBlock,
         handler: (logs) => this.handleLoanCreated(logs),
       }),
       this.catchUpStream({
         streamKey: 'lendingPool:LoanRepaid',
         address: addr.lendingPool,
-        eventSignature: 'event LoanRepaid(uint256 indexed loanId, address indexed borrower, uint256 amount, bool fully)',
+        eventSignature: 'event LoanRepaid(uint256 indexed loanId, address indexed borrower, uint256 amount, bool fullRepayment)',
         currentBlock,
         handler: (logs) => this.handleLoanRepaid(logs),
       }),
+      this.catchUpStream({
+        streamKey: 'lendingPool:GracePeriodTriggered',
+        address: addr.lendingPool,
+        eventSignature: 'event GracePeriodTriggered(uint256 indexed loanId, address indexed borrower)',
+        currentBlock,
+        handler: (logs) => this.handleGracePeriodTriggered(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'lendingPool:LoanDefaulted',
+        address: addr.lendingPool,
+        eventSignature: 'event LoanDefaulted(uint256 indexed loanId, address indexed borrower, uint256 outstanding)',
+        currentBlock,
+        handler: (logs) => this.handleLoanDefaulted(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'lendingPool:LoanWrittenOff',
+        address: addr.lendingPool,
+        eventSignature: 'event LoanWrittenOff(uint256 indexed loanId, address indexed borrower)',
+        currentBlock,
+        handler: (logs) => this.handleLoanWrittenOff(logs),
+      }),
+      // ── LiquidationManager ────────────────────────────────────────────────
       this.catchUpStream({
         streamKey: 'liquidationManager:LoanLiquidated',
         address: addr.liquidationManager,
@@ -129,19 +195,63 @@ export class IndexerService implements OnModuleInit {
         currentBlock,
         handler: (logs) => this.handleLoanLiquidated(logs),
       }),
+      // ── ReputationSBT ─────────────────────────────────────────────────────
       this.catchUpStream({
         streamKey: 'reputationSbt:ScoreUpdated',
         address: addr.reputationSbt,
-        eventSignature: 'event ScoreUpdated(address indexed wallet, uint16 previousScore, uint16 newScore, uint8 tier)',
+        eventSignature: 'event ScoreUpdated(address indexed wallet, uint16 newScore, int16 delta)',
         currentBlock,
         handler: (logs) => this.handleScoreUpdated(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'reputationSbt:SBTMinted',
+        address: addr.reputationSbt,
+        eventSignature: 'event SBTMinted(address indexed wallet, uint256 tokenId)',
+        currentBlock,
+        handler: (logs) => this.handleSbtMinted(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'reputationSbt:SBTBurned',
+        address: addr.reputationSbt,
+        eventSignature: 'event SBTBurned(address indexed wallet, uint256 blacklistExpiry)',
+        currentBlock,
+        handler: (logs) => this.handleSbtBurned(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'reputationSbt:SBTFrozen',
+        address: addr.reputationSbt,
+        eventSignature: 'event SBTFrozen(address indexed wallet)',
+        currentBlock,
+        handler: (logs) => this.handleSbtFrozen(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'reputationSbt:SBTUnfrozen',
+        address: addr.reputationSbt,
+        eventSignature: 'event SBTUnfrozen(address indexed wallet)',
+        currentBlock,
+        handler: (logs) => this.handleSbtUnfrozen(logs),
+      }),
+      // ── ScoreEngine ───────────────────────────────────────────────────────
+      this.catchUpStream({
+        streamKey: 'scoreEngine:SignalProcessed',
+        address: addr.scoreEngine,
+        eventSignature: 'event SignalProcessed(address indexed wallet, uint8 indexed signal, int16 delta)',
+        currentBlock,
+        handler: (logs) => this.handleSignalProcessed(logs),
+      }),
+      this.catchUpStream({
+        streamKey: 'scoreEngine:DecayApplied',
+        address: addr.scoreEngine,
+        eventSignature: 'event DecayApplied(address indexed wallet, int16 delta)',
+        currentBlock,
+        handler: (logs) => this.handleDecayApplied(logs),
       }),
     ]);
 
     this.logger.log(`IndexerService catch-up complete at block ${currentBlock}`, 'IndexerService');
   }
 
-  // ─── Generic chunked getLogs processor ───────────────────────────────────
+  // ─── Generic chunked getLogs processor ──────────────────────────────────
 
   private async catchUpStream(opts: {
     streamKey: string;
@@ -192,12 +302,12 @@ export class IndexerService implements OnModuleInit {
     }
   }
 
-  // ─── Event handlers ───────────────────────────────────────────────────────
+  // ─── LendingPool handlers ────────────────────────────────────────────────
 
   private async handleLoanCreated(logs: any[]): Promise<void> {
     for (const log of logs) {
-      const { loanId, borrower, principal, rateBps, dueTime } = log.args as {
-        loanId: bigint; borrower: string; principal: bigint; rateBps: bigint; dueTime: bigint;
+      const { loanId, borrower, amount, deadline } = log.args as {
+        loanId: bigint; borrower: string; amount: bigint; deadline: bigint;
       };
       await this.loanRepo
         .createQueryBuilder()
@@ -206,11 +316,11 @@ export class IndexerService implements OnModuleInit {
         .values({
           loanId: loanId.toString(),
           borrower: borrower.toLowerCase(),
-          principal: principal.toString(),
+          principal: amount.toString(),
           accruedInterest: '0',
-          dueAt: dueTime.toString(),
+          dueAt: deadline.toString(),
           status: LoanStatus.ACTIVE,
-          rateBps: Number(rateBps),
+          rateBps: 0, // not emitted — enriched on first getLoan query
           blockNumber: log.blockNumber?.toString() ?? '0',
         })
         .orIgnore()
@@ -220,15 +330,59 @@ export class IndexerService implements OnModuleInit {
 
   private async handleLoanRepaid(logs: any[]): Promise<void> {
     for (const log of logs) {
-      const { loanId, fully } = log.args as { loanId: bigint; borrower: string; amount: bigint; fully: boolean };
-      if (fully) {
+      const { loanId, fullRepayment } = log.args as {
+        loanId: bigint; borrower: string; amount: bigint; fullRepayment: boolean;
+      };
+      if (fullRepayment) {
         await this.loanRepo.update(
           { loanId: loanId.toString() },
-          { status: LoanStatus.REPAID },
+          { status: LoanStatus.REPAID, accruedInterest: '0' },
         );
+      } else {
+        // Partial repayment — pull current on-chain state to update snapshot amounts
+        try {
+          const loan = await this.chain.publicClient.readContract({
+            address: this.contracts.addr.lendingPool,
+            abi: LENDING_POOL_ABI,
+            functionName: 'getLoan',
+            args: [loanId],
+          }) as LoanStruct;
+          await this.loanRepo.update(
+            { loanId: loanId.toString() },
+            {
+              principal: loan.principal.toString(),
+              accruedInterest: loan.accruedInterest.toString(),
+            },
+          );
+        } catch (err: any) {
+          this.logger.warn(`handleLoanRepaid: getLoan failed for ${loanId}: ${err.message}`, 'IndexerService');
+        }
       }
     }
   }
+
+  private async handleGracePeriodTriggered(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { loanId } = log.args as { loanId: bigint; borrower: string };
+      await this.loanRepo.update({ loanId: loanId.toString() }, { status: LoanStatus.GRACE_PERIOD });
+    }
+  }
+
+  private async handleLoanDefaulted(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { loanId } = log.args as { loanId: bigint; borrower: string; outstanding: bigint };
+      await this.loanRepo.update({ loanId: loanId.toString() }, { status: LoanStatus.DEFAULTED });
+    }
+  }
+
+  private async handleLoanWrittenOff(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { loanId } = log.args as { loanId: bigint; borrower: string };
+      await this.loanRepo.update({ loanId: loanId.toString() }, { status: LoanStatus.WRITTEN_OFF });
+    }
+  }
+
+  // ─── LiquidationManager handler ──────────────────────────────────────────
 
   private async handleLoanLiquidated(logs: any[]): Promise<void> {
     for (const log of logs) {
@@ -255,30 +409,159 @@ export class IndexerService implements OnModuleInit {
         )
         .execute();
 
+      // LiquidationManager calls markWrittenOff on LendingPool, but update here for safety
       await this.loanRepo.update(
         { loanId: loanId.toString() },
-        { status: LoanStatus.DEFAULTED },
+        { status: LoanStatus.WRITTEN_OFF },
       );
     }
   }
 
+  // ─── ReputationSBT handlers ──────────────────────────────────────────────
+
   private async handleScoreUpdated(logs: any[]): Promise<void> {
-    const TIER_NAMES = ['None', 'Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond'];
     for (const log of logs) {
-      const { wallet, previousScore, newScore, tier } = log.args as {
-        wallet: string; previousScore: number; newScore: number; tier: number;
+      const { wallet, newScore, delta } = log.args as {
+        wallet: string; newScore: number; delta: number;
       };
+      const walletLower = wallet.toLowerCase();
+      const tier = scoreToTier(Number(newScore));
+      const prevScore = Number(newScore) - Number(delta);
+      const occurredAt = log.blockNumber
+        ? new Date(Number(await this.blockTimestamp(log.blockNumber)) * 1000)
+        : new Date();
+
+      await this.scoreHistoryRepo.save({
+        wallet: walletLower,
+        score: Number(newScore),
+        previousScore: prevScore,
+        tier,
+        source: 'on_chain',
+        txHash: log.transactionHash ?? null,
+        blockNumber: log.blockNumber?.toString() ?? null,
+        recordedAt: occurredAt,
+      });
+
+      await this.profileRepo
+        .createQueryBuilder()
+        .insert()
+        .into(BorrowerProfile)
+        .values({ wallet: walletLower, score: Number(newScore), tier })
+        .orUpdate(['score', 'tier'], ['wallet'])
+        .execute();
+
       this.gateway.emitScoreUpdated({
-        wallet: wallet.toLowerCase(),
+        wallet: walletLower,
         newScore: Number(newScore),
-        previousScore: Number(previousScore),
-        tier: TIER_NAMES[tier] ?? 'Unknown',
-        timestamp: Date.now(),
+        previousScore: prevScore,
+        tier,
+        timestamp: occurredAt.getTime(),
       });
     }
   }
 
-  // ─── Checkpoint helpers ───────────────────────────────────────────────────
+  private async handleSbtMinted(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { wallet, tokenId } = log.args as { wallet: string; tokenId: bigint };
+      await this.profileRepo
+        .createQueryBuilder()
+        .insert()
+        .into(BorrowerProfile)
+        .values({ wallet: wallet.toLowerCase(), sbtMinted: true, sbtTokenId: tokenId.toString() })
+        .orUpdate(['sbt_minted', 'sbt_token_id'], ['wallet'])
+        .execute();
+    }
+  }
+
+  private async handleSbtBurned(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { wallet } = log.args as { wallet: string; blacklistExpiry: bigint };
+      await this.profileRepo
+        .createQueryBuilder()
+        .update(BorrowerProfile)
+        .set({ sbtMinted: false })
+        .where('wallet = :w', { w: wallet.toLowerCase() })
+        .execute();
+    }
+  }
+
+  private async handleSbtFrozen(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { wallet } = log.args as { wallet: string };
+      this.gateway.emitCircuitBreaker({
+        contract: 'ReputationSBT',
+        event: 'SBTFrozen',
+        details: wallet.toLowerCase(),
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    }
+  }
+
+  private async handleSbtUnfrozen(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { wallet } = log.args as { wallet: string };
+      this.gateway.emitCircuitBreaker({
+        contract: 'ReputationSBT',
+        event: 'SBTUnfrozen',
+        details: wallet.toLowerCase(),
+        timestamp: Math.floor(Date.now() / 1000),
+      });
+    }
+  }
+
+  // ─── ScoreEngine handlers ────────────────────────────────────────────────
+
+  private async handleSignalProcessed(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { wallet, signal, delta } = log.args as { wallet: string; signal: number; delta: number };
+      const walletLower = wallet.toLowerCase();
+      const signalType = SIGNAL_TYPE_NAMES[signal] ?? ScoreSignalType.ATTESTATION_RECEIVED;
+      const occurredAt = log.blockNumber
+        ? new Date(Number(await this.blockTimestamp(log.blockNumber)) * 1000)
+        : new Date();
+
+      await this.scoreEventRepo.save({
+        wallet: walletLower,
+        signalType,
+        signalSub: SIGNAL_LABEL[signal] ?? `signal_${signal}`,
+        source: 'chain_event',
+        sourceType: SIGNAL_SOURCE_TYPE[signal] ?? 'Passive',
+        delta: Number(delta),
+        scoreAfter: 0, // ScoreUpdated event carries the accurate new score
+        txHash: log.transactionHash ?? null,
+        blockNumber: log.blockNumber?.toString() ?? null,
+        attestationUid: null,
+        attestationPayload: null,
+        occurredAt,
+      });
+    }
+  }
+
+  private async handleDecayApplied(logs: any[]): Promise<void> {
+    for (const log of logs) {
+      const { wallet, delta } = log.args as { wallet: string; delta: number };
+      const occurredAt = log.blockNumber
+        ? new Date(Number(await this.blockTimestamp(log.blockNumber)) * 1000)
+        : new Date();
+
+      await this.scoreEventRepo.save({
+        wallet: wallet.toLowerCase(),
+        signalType: ScoreSignalType.DECAY,
+        signalSub: 'Score decay — inactivity',
+        source: 'chain_event',
+        sourceType: 'Passive',
+        delta: Number(delta),
+        scoreAfter: 0,
+        txHash: log.transactionHash ?? null,
+        blockNumber: log.blockNumber?.toString() ?? null,
+        attestationUid: null,
+        attestationPayload: null,
+        occurredAt,
+      });
+    }
+  }
+
+  // ─── Checkpoint helpers ──────────────────────────────────────────────────
 
   private async getCheckpoint(streamKey: string): Promise<bigint> {
     const row = await this.checkpointRepo.findOne({ where: { streamKey } });
@@ -295,7 +578,7 @@ export class IndexerService implements OnModuleInit {
       .execute();
   }
 
-  // ─── DB fallback for overdue loans ───────────────────────────────────────
+  // ─── DB fallback for overdue loans ──────────────────────────────────────
 
   private async getOverdueLoansFromDb(nowUnix: number): Promise<{ loanId: string; borrower: string; principal: string }[]> {
     return this.loanRepo
