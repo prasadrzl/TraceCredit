@@ -41,6 +41,16 @@ export const LENDING_POOL_WRITE_ABI = [
   },
 ] as const;
 
+export const CREDIT_LINE_MANAGER_WRITE_ABI = [
+  {
+    name: 'requestIncrease',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+] as const;
+
 export const ERC20_WRITE_ABI = [
   {
     name: 'approve',
