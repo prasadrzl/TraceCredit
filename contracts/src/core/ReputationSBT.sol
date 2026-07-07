@@ -27,9 +27,8 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
     address public  stakeVault;
 
     struct SBTData {
-        uint16  score;
-        bool    frozen;
-        uint256 blacklistedUntil;
+        uint16 score;
+        bool   frozen;
     }
 
     mapping(address => uint256)  private _walletToken;
@@ -71,7 +70,7 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
 
         uint256 tokenId = ++_nextTokenId;
         _walletToken[wallet]  = tokenId;
-        _tokenData[tokenId]   = SBTData({score: 0, frozen: false, blacklistedUntil: 0});
+        _tokenData[tokenId]   = SBTData({score: 0, frozen: false});
         _safeMint(wallet, tokenId);
 
         emit SBTMinted(wallet, tokenId);
@@ -176,9 +175,7 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
     }
 
     function _isBlacklisted(address wallet) internal view returns (bool) {
-        uint256 tokenId = _walletToken[wallet];
-        if (tokenId == 0) return false;
-        return _tokenData[tokenId].blacklistedUntil > block.timestamp;
+        return _blacklistExpiry[wallet] > block.timestamp;
     }
 
     function _clamp(int32 val, int32 lo, int32 hi) internal pure returns (int32) {
@@ -197,5 +194,5 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
     }
 
     // ── Gap ───────────────────────────────────────────────────────────────────
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 }
