@@ -34,6 +34,8 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
 
     mapping(address => uint256)  private _walletToken;
     mapping(uint256 => SBTData)  private _tokenData;
+    // Blacklist keyed by wallet so it survives the deletion of _walletToken on burn
+    mapping(address => uint256)  private _blacklistExpiry;
 
     // ── Initializer ───────────────────────────────────────────────────────────
     /**
@@ -63,7 +65,7 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
     function mintSBT() external whenNotPaused {
         address wallet = msg.sender;
         if (_walletToken[wallet] != 0) revert AlreadyHasSBT();
-        if (_isBlacklisted(wallet))    revert Blacklisted(_tokenData[0].blacklistedUntil);
+        if (_isBlacklisted(wallet))    revert Blacklisted(_blacklistExpiry[wallet]);
 
         ISBTStakeVault(stakeVault).deposit(wallet);
 
@@ -101,7 +103,9 @@ contract ReputationSBT is ERC721Upgradeable, ScorableBase, IReputationSBT {
     function burnSBT(address wallet) external onlyRole(GUARDIAN_ROLE) {
         uint256 tokenId = _requireToken(wallet);
         uint256 expiry  = block.timestamp + BLACKLIST_DURATION;
-        _tokenData[tokenId].blacklistedUntil = expiry;
+        // Write blacklist by wallet address BEFORE deleting _walletToken so
+        // _isBlacklisted can find it even after the token mapping is cleared.
+        _blacklistExpiry[wallet] = expiry;
         _burn(tokenId);
         delete _walletToken[wallet];
         emit SBTBurned(wallet, expiry);
