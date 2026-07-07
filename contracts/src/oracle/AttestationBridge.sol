@@ -19,7 +19,8 @@ contract AttestationBridge is ProtocolBase {
     bytes32 public constant ATTESTOR_ROLE = keccak256("ATTESTOR_ROLE");
 
     // ── Constants ─────────────────────────────────────────────────────────────
-    uint256 public constant QUORUM_WINDOW = 1 hours;
+    uint256 public constant QUORUM_WINDOW            = 1 hours;
+    uint32  public constant MAX_REPAYMENTS_PER_CALL  = 12;
 
     // ── State ─────────────────────────────────────────────────────────────────
     address public scoreEngine;
@@ -51,6 +52,7 @@ contract AttestationBridge is ProtocolBase {
     error AlreadyVoted();
     error QuorumWindowExpired();
     error InvalidSignalType();
+    error RepaymentCountTooHigh();
 
     // ── Initializer ───────────────────────────────────────────────────────────
     /**
@@ -153,6 +155,7 @@ contract AttestationBridge is ProtocolBase {
         onlyRole(ATTESTOR_ROLE)
         whenNotPaused
     {
+        if (repaymentCount > MAX_REPAYMENTS_PER_CALL) revert RepaymentCountTooHigh();
         for (uint32 i; i < repaymentCount; ) {
             IScoreEngine(scoreEngine).processSignal(
                 wallet,
