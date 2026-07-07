@@ -11,6 +11,8 @@
     "build": "npm run build --workspaces",
     "test:contracts": "cd contracts && forge test",
     "test:api": "npm run test -w api",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "sync-addresses": "ts-node --transpileOnly --project scripts/tsconfig.json scripts/sync-addresses.ts",
+    "sync-addresses:dry": "ts-node --transpileOnly --project scripts/tsconfig.json scripts/sync-addresses.ts --dry-run"
   }
 }
