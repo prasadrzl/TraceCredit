@@ -20,7 +20,7 @@ interface IInterestAccrualEngine {
      */
     function calcAccrued(uint256 principal, uint256 annualRateBps, uint256 elapsedBlocks)
         external
-        pure
+        view
         returns (uint256 interest);
 
     /**
@@ -36,8 +36,11 @@ interface IInterestAccrualEngine {
         returns (uint256 reserveCut, uint256 lpCut);
 
     // ── Governance-settable parameter views ───────────────────────────────────
-    function BASE_RATE()       external view returns (uint256);
-    function SLOPE_1()         external view returns (uint256);
-    function JUMP_MULTIPLIER() external view returns (uint256);
-    function KINK()            external view returns (uint256);
+    function BASE_RATE()        external view returns (uint256);
+    function SLOPE_1()          external view returns (uint256);
+    function JUMP_MULTIPLIER()  external view returns (uint256);
+    function KINK()             external view returns (uint256);
+    function BLOCKS_PER_YEAR()  external view returns (uint256);
+
+    function setBlocksPerYear(uint256 blocksPerYear_) external;
 }

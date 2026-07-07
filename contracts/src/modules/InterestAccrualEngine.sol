@@ -18,20 +18,19 @@ import {IInterestAccrualEngine} from "../interfaces/IInterestAccrualEngine.sol";
 contract InterestAccrualEngine is ProtocolBase, IInterestAccrualEngine {
     uint256 public constant BPS_DENOMINATOR  = 10_000;
     uint256 public constant SCALE            = 1e18;
-    /*
-     * BLOCKS_PER_YEAR assumes ~12-second block times on Ethereum mainnet.
-     * Arbitrum / Base produce blocks faster; adjust via governance if needed.
-     */
-    uint256 public constant BLOCKS_PER_YEAR  = 2_628_000;
 
     // ── Governable rate parameters ────────────────────────────────────────────
-    uint256 public BASE_RATE;       // bps (default 200 = 2 %)
-    uint256 public SLOPE_1;         // bps added per unit utilisation below kink (default 1000)
-    uint256 public JUMP_MULTIPLIER; // bps added per unit utilisation above kink (default 30000)
-    uint256 public KINK;            // utilisation kink, 1e18 scale (default 0.7e18)
+    uint256 public BASE_RATE;        // bps (default 200 = 2 %)
+    uint256 public SLOPE_1;          // bps added per unit utilisation below kink (default 1000)
+    uint256 public JUMP_MULTIPLIER;  // bps added per unit utilisation above kink (default 30000)
+    uint256 public KINK;             // utilisation kink, 1e18 scale (default 0.7e18)
+    // Governable so Base / Optimism (~2-second blocks, ~15.7 M/year) can be corrected
+    // without a full contract upgrade. Ethereum mainnet: 2_628_000. Base/Optimism: 15_768_000.
+    uint256 public BLOCKS_PER_YEAR;
 
     // ── Events ────────────────────────────────────────────────────────────────
     event RateParamsUpdated(uint256 baseRate, uint256 slope1, uint256 jumpMultiplier, uint256 kink);
+    event BlocksPerYearUpdated(uint256 newValue);
 
     // ── Initializer ───────────────────────────────────────────────────────────
     /**
@@ -41,10 +40,11 @@ contract InterestAccrualEngine is ProtocolBase, IInterestAccrualEngine {
      */
     function initialize(address admin, address treasury_) external initializer {
         __ProtocolBase_init(admin, treasury_);
-        BASE_RATE       = 200;
-        SLOPE_1         = 1_000;
-        JUMP_MULTIPLIER = 30_000;
-        KINK            = 0.7e18;
+        BASE_RATE        = 200;
+        SLOPE_1          = 1_000;
+        JUMP_MULTIPLIER  = 30_000;
+        KINK             = 0.7e18;
+        BLOCKS_PER_YEAR  = 15_768_000; // Base / Optimism: ~2-second blocks
     }
 
     // ── Governance ────────────────────────────────────────────────────────────
@@ -67,6 +67,18 @@ contract InterestAccrualEngine is ProtocolBase, IInterestAccrualEngine {
         JUMP_MULTIPLIER = jumpMultiplier_;
         KINK            = kink_;
         emit RateParamsUpdated(baseRate_, slope1_, jumpMultiplier_, kink_);
+    }
+
+    /**
+     * @notice Update the blocks-per-year denominator. Only GOVERNOR_ROLE.
+     *         Use 15_768_000 for Base/Optimism (~2-second blocks),
+     *         2_628_000 for Ethereum mainnet (~12-second blocks).
+     * @param blocksPerYear_ New blocks-per-year value.
+     */
+    function setBlocksPerYear(uint256 blocksPerYear_) external onlyRole(GOVERNOR_ROLE) {
+        require(blocksPerYear_ > 0, "Invalid blocksPerYear");
+        BLOCKS_PER_YEAR = blocksPerYear_;
+        emit BlocksPerYearUpdated(blocksPerYear_);
     }
 
     // ── IInterestAccrualEngine ────────────────────────────────────────────────
@@ -93,7 +105,7 @@ contract InterestAccrualEngine is ProtocolBase, IInterestAccrualEngine {
      */
     function calcAccrued(uint256 principal, uint256 annualRateBps, uint256 elapsedBlocks)
         external
-        pure
+        view
         returns (uint256 interest)
     {
         return (principal * annualRateBps * elapsedBlocks) / (BLOCKS_PER_YEAR * BPS_DENOMINATOR);
@@ -116,5 +128,5 @@ contract InterestAccrualEngine is ProtocolBase, IInterestAccrualEngine {
     }
 
     // ── Gap ───────────────────────────────────────────────────────────────────
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 }
