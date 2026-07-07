@@ -73,7 +73,7 @@ contract FeeCollector is ProtocolBase, IFeeCollector {
 
         if (reserveCut > 0) usdc.safeTransfer(reserveModule, reserveCut);
         if (daoCut     > 0) usdc.safeTransfer(treasury,      daoCut);
-        // LP cut stays in this contract — LendingPool pulls it back via a separate mechanism.
+        if (lpCut      > 0) usdc.safeTransfer(lendingPool,   lpCut);
 
         emit FeesDistributed(reserveCut, daoCut, lpCut);
     }

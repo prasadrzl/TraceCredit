@@ -316,11 +316,12 @@ contract LendingPool is VaultBase, ILendingPool {
 
     function _settleInterest(uint256 loanId, uint256 interest) internal {
         if (interest == 0 || feeCollector == address(0)) return;
-        (uint256 reserveCut, uint256 lpCut) = IInterestAccrualEngine(interestAccrualEngine)
-            .calcFee(interest, reserveFactor);
-        IERC20(asset()).safeTransfer(feeCollector, reserveCut);
-        IFeeCollector(feeCollector).distributeFees(reserveCut);
-        emit InterestSettled(loanId, reserveCut, lpCut);
+        // Send the full interest to FeeCollector; it routes reserve + DAO cuts out
+        // and transfers the LP cut back to this contract, so net cost to the pool
+        // is only (reserveShareBps + daoShareBps) of total interest.
+        IERC20(asset()).safeTransfer(feeCollector, interest);
+        IFeeCollector(feeCollector).distributeFees(interest);
+        emit InterestSettled(loanId, interest, 0);
     }
 
     // ── Gap ───────────────────────────────────────────────────────────────────
