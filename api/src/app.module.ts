@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_INTERCEPTOR, APP_PIPE, APP_GUARD } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
@@ -70,15 +69,6 @@ import { IndexerModule } from './indexer/indexer.module';
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
-    {
-      provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: false,
-        transform: true,
-        transformOptions: { enableImplicitConversion: true },
-      }),
-    },
   ],
 })
 export class AppModule {}
