@@ -63,9 +63,18 @@ contract Deploy is Script {
         address attestor2 = vm.envOr("ATTESTOR_ADDRESS_2", address(0));
         uint8 quorum = uint8(vm.envUint("QUORUM"));
 
-        // Deploy MockUSDC when USDC_ADDRESS is not set (testnet convenience).
+        // Deploy MockUSDC when USDC_ADDRESS is not set — testnet only.
         address usdc = vm.envOr("USDC_ADDRESS", address(0));
         bool deployedMockUsdc = false;
+
+        // Known testnet chain IDs that are allowed to fall back to MockUSDC.
+        bool isTestnet = (block.chainid == 11155420  // Optimism Sepolia
+                       || block.chainid == 84532     // Base Sepolia
+                       || block.chainid == 11155111  // Ethereum Sepolia
+                       || block.chainid == 31337);   // Anvil local
+
+        require(usdc != address(0) || isTestnet,
+            "USDC_ADDRESS must be set for mainnet deployment");
 
         vm.startBroadcast(deployerKey);
 
@@ -198,9 +207,18 @@ contract Deploy is Script {
             )
         );
 
-        address[] memory pausables = new address[](2);
-        pausables[0] = address(pool);
-        pausables[1] = address(scoreEngine);
+        address[] memory pausables = new address[](11);
+        pausables[0]  = address(pool);
+        pausables[1]  = address(scoreEngine);
+        pausables[2]  = address(sbt);
+        pausables[3]  = address(stakeVault);
+        pausables[4]  = address(clm);
+        pausables[5]  = address(reserve);
+        pausables[6]  = address(feeCollector);
+        pausables[7]  = address(liqMgr);
+        pausables[8]  = address(whitelist);
+        pausables[9]  = address(rateLimiter);
+        pausables[10] = address(iae);
         epause = EmergencyPause(
             _proxy(
                 address(new EmergencyPause()),
@@ -279,11 +297,29 @@ contract Deploy is Script {
             bridge.grantRole(bridge.ATTESTOR_ROLE(), attestor2);
         }
 
-        // EmergencyPause needs pause/unpause rights
+        // EmergencyPause needs pause/unpause rights on every registered contract
         pool.grantRole(pool.PAUSER_ROLE(), address(epause));
         pool.grantRole(pool.GOVERNOR_ROLE(), address(epause));
         scoreEngine.grantRole(scoreEngine.PAUSER_ROLE(), address(epause));
         scoreEngine.grantRole(scoreEngine.GOVERNOR_ROLE(), address(epause));
+        sbt.grantRole(sbt.PAUSER_ROLE(), address(epause));
+        sbt.grantRole(sbt.GOVERNOR_ROLE(), address(epause));
+        stakeVault.grantRole(stakeVault.PAUSER_ROLE(), address(epause));
+        stakeVault.grantRole(stakeVault.GOVERNOR_ROLE(), address(epause));
+        clm.grantRole(clm.PAUSER_ROLE(), address(epause));
+        clm.grantRole(clm.GOVERNOR_ROLE(), address(epause));
+        reserve.grantRole(reserve.PAUSER_ROLE(), address(epause));
+        reserve.grantRole(reserve.GOVERNOR_ROLE(), address(epause));
+        feeCollector.grantRole(feeCollector.PAUSER_ROLE(), address(epause));
+        feeCollector.grantRole(feeCollector.GOVERNOR_ROLE(), address(epause));
+        liqMgr.grantRole(liqMgr.PAUSER_ROLE(), address(epause));
+        liqMgr.grantRole(liqMgr.GOVERNOR_ROLE(), address(epause));
+        whitelist.grantRole(whitelist.PAUSER_ROLE(), address(epause));
+        whitelist.grantRole(whitelist.GOVERNOR_ROLE(), address(epause));
+        rateLimiter.grantRole(rateLimiter.PAUSER_ROLE(), address(epause));
+        rateLimiter.grantRole(rateLimiter.GOVERNOR_ROLE(), address(epause));
+        iae.grantRole(iae.PAUSER_ROLE(), address(epause));
+        iae.grantRole(iae.GOVERNOR_ROLE(), address(epause));
 
         // Silence unused warning
         (admin);
