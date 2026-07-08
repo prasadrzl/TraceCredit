@@ -1,8 +1,16 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { createPublicClient, createWalletClient, http, PublicClient, WalletClient } from 'viem';
+import { createPublicClient, createWalletClient, http, PublicClient, WalletClient, Chain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { optimismSepolia } from 'viem/chains';
+import { optimismSepolia, base, baseSepolia, mainnet, optimism } from 'viem/chains';
+
+const CHAIN_MAP: Record<number, Chain> = {
+  1:        mainnet,
+  10:       optimism,
+  8453:     base,
+  84532:    baseSepolia,
+  11155420: optimismSepolia,
+};
 import { AppLogger } from '../logger/logger.service';
 
 @Injectable()
@@ -16,11 +24,17 @@ export class ChainService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    const rpcUrl = this.config.get<string>('chain.rpcUrl')!;
+    const rpcUrl  = this.config.get<string>('chain.rpcUrl')!;
+    const chainId = this.config.get<number>('chain.chainId') ?? 11155420;
+    const chain   = CHAIN_MAP[chainId] ?? optimismSepolia;
+
+    if (!CHAIN_MAP[chainId]) {
+      this.logger.warn(`ChainService: unknown chain ID ${chainId}, falling back to optimismSepolia`, 'ChainService');
+    }
 
     // @ts-ignore TS2589: viem generics exceed tsc depth limit — safe to ignore
     this._publicClient = createPublicClient({
-      chain: optimismSepolia,
+      chain,
       transport: http(rpcUrl, {
         retryCount: 3,
         retryDelay: 500,
@@ -33,13 +47,13 @@ export class ChainService implements OnModuleInit {
       const account = privateKeyToAccount(privateKey as `0x${string}`);
       this._walletClient = createWalletClient({
         account,
-        chain: optimismSepolia,
+        chain,
         transport: http(rpcUrl),
       });
       this.logger.log(`Wallet client initialised: ${account.address}`, 'ChainService');
     }
 
-    this.logger.log(`Chain client ready → RPC: ${rpcUrl}`, 'ChainService');
+    this.logger.log(`Chain client ready → chain: ${chain.name} (${chainId}), RPC: ${rpcUrl}`, 'ChainService');
   }
 
   get publicClient(): PublicClient {
