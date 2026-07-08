@@ -33,7 +33,7 @@ export function WagmiProvider({ children }: { children: React.ReactNode }) {
         <RainbowKitThemed>
           {children}
         </RainbowKitThemed>
-        <ReactQueryDevtools initialIsOpen={false} />
+        {process.env.NODE_ENV !== 'production' && <ReactQueryDevtools initialIsOpen={false} />}
       </QueryClientProvider>
     </BaseWagmiProvider>
   );
