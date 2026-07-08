@@ -50,7 +50,7 @@ function StatSkeleton() {
 export function MarketStatCards() {
   const { data, isLoading } = useMarketStats();
 
-  if (isLoading) {
+  if (isLoading || !data) {
     return (
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
         {Array.from({ length: 5 }).map((_, i) => <StatSkeleton key={i} />)}
@@ -58,7 +58,7 @@ export function MarketStatCards() {
     );
   }
 
-  const d = data!;
+  const d = data;
   const utilPct = (d.utilisationBps / 100).toFixed(1);
   const kinkPct  = 70;
   const capPct   = 90;
