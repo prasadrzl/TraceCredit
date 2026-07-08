@@ -30,7 +30,7 @@ const ALL_ENTITIES = [
         migrationsRun: config.get<string>('nodeEnv') !== 'development',
         migrations: [process.cwd() + '/src/database/migrations/*.{ts,js}'],
         logging: config.get<string>('nodeEnv') === 'development' ? ['query', 'error'] : ['error'],
-        ssl: config.get<string>('nodeEnv') === 'production' ? { rejectUnauthorized: false } : false,
+        ssl: config.get<string>('nodeEnv') === 'production' ? { rejectUnauthorized: true } : false,
         poolSize: 20,
         connectTimeoutMS: 10_000,
       }),

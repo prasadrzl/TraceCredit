@@ -28,5 +28,5 @@ export const AppDataSource = new DataSource({
   // synchronize ONLY in development — migrations handle preprod/prod
   synchronize: env === 'development',
   logging: env === 'development' ? ['query', 'error'] : ['error'],
-  ssl: env === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: env === 'production' ? { rejectUnauthorized: true } : false,
 });
