@@ -65,12 +65,22 @@ export function LiquidationTable({ records }: Props) {
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div>
+        <table className="w-full" style={{ tableLayout: 'fixed' }}>
+          <colgroup>
+            <col style={{ width: '13%' }} /> {/* LOAN ID */}
+            <col style={{ width: '16%' }} /> {/* BORROWER */}
+            <col style={{ width: '9%' }}  /> {/* TIER */}
+            <col style={{ width: '9%' }}  /> {/* PRINCIPAL */}
+            <col style={{ width: '10%' }} /> {/* RECOVERED */}
+            <col style={{ width: '11%' }} /> {/* WRITTEN OFF */}
+            <col style={{ width: '14%' }} /> {/* RECOVERY */}
+            <col style={{ width: '18%' }} /> {/* KEEPER TX */}
+          </colgroup>
           <thead>
             <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
               {['LOAN ID', 'BORROWER', 'TIER', 'PRINCIPAL', 'RECOVERED', 'WRITTEN OFF', 'RECOVERY', 'KEEPER TX'].map(h => (
-                <th key={h} className="text-left px-3 py-3 text-text-tertiary font-medium" style={{ fontSize: 10, letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>{h}</th>
+                <th key={h} className="text-left px-3 py-3 text-text-tertiary font-medium" style={{ fontSize: 10, letterSpacing: '0.06em' }}>{h}</th>
               ))}
             </tr>
           </thead>
@@ -88,17 +98,17 @@ export function LiquidationTable({ records }: Props) {
             )}
             {paged.map(r => (
               <tr key={r.loanNum} className="hover:bg-bg-surface transition-colors" style={{ borderBottom: '0.5px solid var(--border)' }}>
-                <td className="px-3 py-3.5">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-text-tertiary" style={{ fontSize: 12 }}>⊙</span>
-                    <div>
+                <td className="px-3 py-3.5" style={{ overflow: 'hidden' }}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-text-tertiary flex-shrink-0" style={{ fontSize: 12 }}>⊙</span>
+                    <div className="min-w-0">
                       <p className="font-mono font-semibold text-text-primary" style={{ fontSize: 12 }}>#{r.loanNum}</p>
-                      <p className="font-mono text-text-tertiary" style={{ fontSize: 10 }}>{r.loanTxHash}</p>
+                      <p className="font-mono text-text-tertiary truncate" style={{ fontSize: 10 }}>{r.loanTxHash}</p>
                     </div>
                   </div>
                 </td>
-                <td className="px-3 py-3.5">
-                  <p className="font-mono text-text-primary" style={{ fontSize: 12 }}>{r.borrowerShort}</p>
+                <td className="px-3 py-3.5" style={{ overflow: 'hidden' }}>
+                  <p className="font-mono text-text-primary truncate" style={{ fontSize: 12 }}>{r.borrowerShort}</p>
                   <p className="text-text-tertiary" style={{ fontSize: 10 }}>score {r.borrowerScore}</p>
                 </td>
                 <td className="px-3 py-3.5">
@@ -115,11 +125,11 @@ export function LiquidationTable({ records }: Props) {
                     ? <p className="font-mono font-semibold" style={{ fontSize: 12, color: 'var(--danger)' }}>{fmt(r.writtenOff)}</p>
                     : <span className="text-text-tertiary" style={{ fontSize: 12 }}>—</span>}
                 </td>
-                <td className="px-3 py-3.5 min-w-[100px]">
+                <td className="px-3 py-3.5">
                   <RecoveryBar pct={r.recoveryPct} />
                 </td>
-                <td className="px-3 py-3.5">
-                  <p className="font-mono text-text-tertiary" style={{ fontSize: 10 }}>{r.keeperTxHash}</p>
+                <td className="px-3 py-3.5" style={{ overflow: 'hidden' }}>
+                  <p className="font-mono text-text-tertiary truncate" style={{ fontSize: 10 }}>{r.keeperTxHash}</p>
                   <p className="text-text-tertiary" style={{ fontSize: 10 }}>{r.keeperDate}</p>
                 </td>
               </tr>

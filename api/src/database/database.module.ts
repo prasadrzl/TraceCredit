@@ -26,9 +26,12 @@ const ALL_ENTITIES = [
         entities: ALL_ENTITIES,
         // dev: auto-sync schema; preprod/prod: use migrations
         synchronize: config.get<string>('nodeEnv') === 'development',
-        // migrations run on preprod/prod startup
-        migrationsRun: config.get<string>('nodeEnv') !== 'development',
-        migrations: [process.cwd() + '/src/database/migrations/*.{ts,js}'],
+        // In dev, synchronize handles the schema — no migration files needed.
+        // In preprod/prod, point at compiled JS in dist/.
+        ...(config.get<string>('nodeEnv') !== 'development' && {
+          migrationsRun: true,
+          migrations: [process.cwd() + '/dist/database/migrations/*.js'],
+        }),
         logging: config.get<string>('nodeEnv') === 'development' ? ['query', 'error'] : ['error'],
         ssl: config.get<string>('nodeEnv') === 'production' ? { rejectUnauthorized: true } : false,
         poolSize: 20,
