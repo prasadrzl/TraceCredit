@@ -25,6 +25,9 @@ contract ReserveModule is ProtocolBase, IReserveModule {
     IERC20  public usdc;
     uint256 public minimumReserveFloor;
 
+    /// @dev LendingPool address reimbursed when the reserve absorbs a loss.
+    address public lendingPool;
+
     mapping(address => bool) public isWhitelistedStrategy;
 
     // ── Initializer ───────────────────────────────────────────────────────────
@@ -51,14 +54,35 @@ contract ReserveModule is ProtocolBase, IReserveModule {
         minimumReserveFloor = floor;
     }
 
+    /// @notice Set the LendingPool reimbursed on loss absorption. Only GOVERNOR_ROLE.
+    /// @param addr LendingPool address.
+    function setLendingPool(address addr) external onlyRole(GOVERNOR_ROLE) {
+        if (addr == address(0)) revert ZeroAddress();
+        lendingPool = addr;
+    }
+
     // ── IReserveModule ────────────────────────────────────────────────────────
-    /// @notice Absorb a bad-debt loss from a defaulted loan. Only LENDING_POOL_ROLE.
-    /// @param amount USDC amount to write off.
-    function absorbLoss(uint256 amount) external onlyRole(LENDING_POOL_ROLE) {
+    /**
+     * @notice Reimburse the LendingPool for a bad-debt loss, up to the reserve's
+     *         available balance. Covers as much of the loss as it can and returns
+     *         the covered amount so the caller writes off only the true shortfall.
+     *         Never reverts on an underfunded reserve — a large default must still
+     *         be resolvable. The minimum floor guards strategy deployment, not
+     *         loss coverage, so the reserve may be drawn down to zero here.
+     *         Only LENDING_POOL_ROLE.
+     * @param amount  USDC loss to cover.
+     * @return covered USDC actually transferred to the pool (min(balance, amount)).
+     */
+    function absorbLoss(uint256 amount)
+        external
+        onlyRole(LENDING_POOL_ROLE)
+        returns (uint256 covered)
+    {
+        if (lendingPool == address(0)) revert ZeroAddress();
         uint256 bal = usdc.balanceOf(address(this));
-        if (bal < amount) revert InsufficientReserve();
-        // Caller already transferred loss from the pool; reserve simply records the write-off.
-        emit LossAbsorbed(amount, bal - amount);
+        covered = bal >= amount ? amount : bal;
+        if (covered > 0) usdc.safeTransfer(lendingPool, covered);
+        emit LossAbsorbed(amount, covered, bal - covered);
     }
 
     /**
@@ -111,5 +135,5 @@ contract ReserveModule is ProtocolBase, IReserveModule {
     }
 
     // ── Gap ───────────────────────────────────────────────────────────────────
-    uint256[47] private __gap;
+    uint256[46] private __gap;
 }
