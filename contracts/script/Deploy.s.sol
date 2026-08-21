@@ -267,6 +267,8 @@ contract Deploy is Script {
         // SBT
         sbt.grantRole(sbt.SCORE_ENGINE_ROLE(), address(scoreEngine));
         stakeVault.grantRole(stakeVault.SBT_CONTRACT_ROLE(), address(sbt));
+        // LiquidationManager slashes defaulters' stakes into the reserve
+        stakeVault.grantRole(stakeVault.GUARDIAN_ROLE(), address(liqMgr));
 
         // ScoreEngine
         scoreEngine.grantRole(scoreEngine.LENDING_POOL_ROLE(), address(pool));
@@ -280,6 +282,7 @@ contract Deploy is Script {
         // ReserveModule — pool funds it via interest; liqMgr absorbs losses
         reserve.grantRole(reserve.LENDING_POOL_ROLE(), address(pool));
         reserve.grantRole(reserve.LENDING_POOL_ROLE(), address(liqMgr));
+        reserve.setLendingPool(address(pool)); // reserve reimburses the pool on loss
 
         // FeeCollector
         feeCollector.grantRole(feeCollector.LENDING_POOL_ROLE(), address(pool));
@@ -287,9 +290,10 @@ contract Deploy is Script {
         // LendingPool grants liqMgr permission to call markDefaulted/markWrittenOff
         pool.grantRole(pool.LIQUIDATION_MANAGER_ROLE(), address(liqMgr));
 
-        // LiquidationManager keeper roles
+        // LiquidationManager keeper roles + stake-slash wiring
         liqMgr.grantRole(liqMgr.KEEPER_ROLE(), keeper);
         liqMgr.grantRole(liqMgr.LIQUIDATION_BOT_ROLE(), keeper);
+        liqMgr.setStakeVault(address(stakeVault));
 
         // AttestationBridge attestors (quorum >= 2 requires at least two)
         bridge.grantRole(bridge.ATTESTOR_ROLE(), attestor);

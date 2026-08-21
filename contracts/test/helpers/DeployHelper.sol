@@ -143,6 +143,7 @@ abstract contract DeployHelper is Test {
         // SBT roles
         sbt.grantRole(sbt.SCORE_ENGINE_ROLE(),    address(scoreEngine));
         stakeVault.grantRole(stakeVault.SBT_CONTRACT_ROLE(), address(sbt));
+        stakeVault.grantRole(stakeVault.GUARDIAN_ROLE(),     address(liqMgr));
 
         // ScoreEngine roles
         scoreEngine.grantRole(scoreEngine.LENDING_POOL_ROLE(), address(pool));
@@ -156,12 +157,14 @@ abstract contract DeployHelper is Test {
         // Reserve roles
         reserve.grantRole(reserve.LENDING_POOL_ROLE(), address(pool));
         reserve.grantRole(reserve.LENDING_POOL_ROLE(), address(liqMgr));
+        reserve.setLendingPool(address(pool));
 
         // FeeCollector roles
         feeCol.grantRole(feeCol.LENDING_POOL_ROLE(), address(pool));
 
-        // Pool LIQUIDATION_MANAGER_ROLE
+        // Pool LIQUIDATION_MANAGER_ROLE + stake-slash wiring
         pool.grantRole(pool.LIQUIDATION_MANAGER_ROLE(), address(liqMgr));
+        liqMgr.setStakeVault(address(stakeVault));
 
         // EmergencyPause needs pause/unpause rights on contracts
         pool.grantRole(pool.PAUSER_ROLE(),    address(epause));
