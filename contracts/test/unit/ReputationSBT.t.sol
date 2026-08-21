@@ -188,25 +188,27 @@ contract ReputationSBTTest is DeployHelper {
     }
 
     function test_burnSBT_preventsRemint_viaMintCheck() public {
-        // Verify the actual behavior of burn + mint
         _mintSBT(alice);
+
+        // burnSBT writes a wallet-keyed blacklist entry (24 months) BEFORE deleting
+        // the token mapping, so the blacklist survives the burn and blocks re-mint.
+        uint256 expectedExpiry = block.timestamp + sbt.BLACKLIST_DURATION();
         vm.prank(admin);
         sbt.burnSBT(alice);
 
-        // After burn: _walletToken[alice] = 0 → hasSBT = false → isBlacklisted = false
-        // mintSBT checks: if (_walletToken[wallet] != 0) revert AlreadyHasSBT — this is 0 now
-        // if (_isBlacklisted(wallet)) — this checks _walletToken[wallet] which is 0, so returns false
-        // So technically alice CAN remint after burn... this is a bug in the spec but we test actual behavior
         assertFalse(sbt.hasSBT(alice));
+        assertTrue(sbt.isBlacklisted(alice), "wallet must be blacklisted after burn");
 
-        // Try reminting
+        // Re-minting while blacklisted must revert — a defaulter cannot cheaply
+        // spin up a fresh SBT on the same wallet.
         uint256 stake = stakeVault.stakeAmount();
         usdc.mint(alice, stake);
         vm.startPrank(alice);
         usdc.approve(address(stakeVault), stake);
-        sbt.mintSBT(); // Can remint (spec may intend different behavior but this is actual code)
+        vm.expectRevert(abi.encodeWithSelector(IReputationSBT.Blacklisted.selector, expectedExpiry));
+        sbt.mintSBT();
         vm.stopPrank();
-        assertTrue(sbt.hasSBT(alice));
+        assertFalse(sbt.hasSBT(alice));
     }
 
     function test_burnSBT_onlyGuardian() public {
