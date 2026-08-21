@@ -173,7 +173,8 @@ contract AttestationBridgeTest is DeployHelper {
 
     /// @dev More repayments processed through fulfillCrossProtocolData → higher score (monotone).
     function testFuzz_fulfillCrossProtocolData_moreRepayments_higherScore(uint8 n) public {
-        vm.assume(n > 0 && n < 20);
+        // n+1 is passed to the second call, so keep n+1 within MAX_REPAYMENTS_PER_CALL.
+        vm.assume(n > 0 && uint256(n) + 1 <= bridge.MAX_REPAYMENTS_PER_CALL());
 
         address wallet2 = makeAddr("wallet2");
         _mintSBT(wallet2);

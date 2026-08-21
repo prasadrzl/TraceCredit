@@ -26,14 +26,17 @@ contract FeeCollectorTest is DeployHelper {
 
         uint256 reserveBefore  = usdc.balanceOf(address(reserve));
         uint256 treasuryBefore = usdc.balanceOf(treasury);
+        uint256 poolBefore     = usdc.balanceOf(address(pool));
 
         vm.prank(poolCaller);
         feeCol.distributeFees(total);
 
-        // Default split: 15% reserve, 5% DAO, 80% LP (stays in contract)
+        // Default split: 15% reserve, 5% DAO, 80% LP (forwarded to the LendingPool,
+        // so it accrues to LP token holders — nothing is stranded in the collector).
         assertEq(usdc.balanceOf(address(reserve)) - reserveBefore, 15e6);
         assertEq(usdc.balanceOf(treasury) - treasuryBefore, 5e6);
-        assertEq(usdc.balanceOf(address(feeCol)), 80e6);
+        assertEq(usdc.balanceOf(address(pool)) - poolBefore, 80e6);
+        assertEq(usdc.balanceOf(address(feeCol)), 0);
     }
 
     function test_distributeFees_zero_noOp() public {
@@ -94,13 +97,16 @@ contract FeeCollectorTest is DeployHelper {
 
         uint256 total = 200e6;
         usdc.mint(address(feeCol), total);
+        uint256 poolBefore = usdc.balanceOf(address(pool));
 
         vm.prank(poolCaller);
         feeCol.distributeFees(total);
 
+        // 50% reserve, 0% DAO, 50% LP forwarded to the pool.
         assertEq(usdc.balanceOf(address(reserve)), 100e6);
         assertEq(usdc.balanceOf(treasury), 0);
-        assertEq(usdc.balanceOf(address(feeCol)), 100e6);
+        assertEq(usdc.balanceOf(address(pool)) - poolBefore, 100e6);
+        assertEq(usdc.balanceOf(address(feeCol)), 0);
     }
 
     // ── Fuzz ──────────────────────────────────────────────────────────────────
@@ -126,15 +132,18 @@ contract FeeCollectorTest is DeployHelper {
 
         uint256 reserveBefore  = usdc.balanceOf(address(reserve));
         uint256 treasuryBefore = usdc.balanceOf(treasury);
-        uint256 feeColBefore   = usdc.balanceOf(address(feeCol));
+        uint256 poolBefore     = usdc.balanceOf(address(pool));
 
         vm.prank(poolCaller);
         feeCol.distributeFees(total);
 
-        uint256 reserveOut  = usdc.balanceOf(address(reserve))  - reserveBefore;
-        uint256 treasuryOut = usdc.balanceOf(treasury)          - treasuryBefore;
-        uint256 lpRemaining = usdc.balanceOf(address(feeCol))   - (feeColBefore - total);
-        assertEq(reserveOut + treasuryOut + lpRemaining, total, "all fees accounted for");
+        // LP cut is forwarded to the pool; the three cuts must sum to the total
+        // and nothing may be stranded in the collector.
+        uint256 reserveOut  = usdc.balanceOf(address(reserve)) - reserveBefore;
+        uint256 treasuryOut = usdc.balanceOf(treasury)         - treasuryBefore;
+        uint256 lpOut       = usdc.balanceOf(address(pool))    - poolBefore;
+        assertEq(reserveOut + treasuryOut + lpOut, total, "all fees accounted for");
+        assertEq(usdc.balanceOf(address(feeCol)), 0, "nothing stranded in collector");
     }
 
     /// @dev Any split where components sum to 10 000 bps must be accepted.
