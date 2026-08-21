@@ -7,6 +7,7 @@ import {ILendingPool} from "../interfaces/ILendingPool.sol";
 import {IScoreEngine} from "../interfaces/IScoreEngine.sol";
 import {ICreditLineManager} from "../interfaces/ICreditLineManager.sol";
 import {IReserveModule} from "../interfaces/IReserveModule.sol";
+import {ISBTStakeVault} from "../interfaces/ISBTStakeVault.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
@@ -42,6 +43,8 @@ contract LiquidationManager is ProtocolBase, ILiquidationManager {
     address public scoreEngine;
     address public creditLineManager;
     address public reserveModule;
+    /// @dev SBTStakeVault whose stake is slashed to the reserve on default (zero = disabled).
+    address public stakeVault;
 
     // ── Initializer ───────────────────────────────────────────────────────────
     /**
@@ -70,6 +73,13 @@ contract LiquidationManager is ProtocolBase, ILiquidationManager {
         scoreEngine       = scoreEngine_;
         creditLineManager = creditLineManager_;
         reserveModule     = reserveModule_;
+    }
+
+    // ── Governance ────────────────────────────────────────────────────────────
+    /// @notice Set the SBTStakeVault whose stake is slashed on default. Only GOVERNOR_ROLE.
+    /// @param addr SBTStakeVault address (zero address disables stake slashing).
+    function setStakeVault(address addr) external onlyRole(GOVERNOR_ROLE) {
+        stakeVault = addr;
     }
 
     // ── ILiquidationManager ───────────────────────────────────────────────────
@@ -129,18 +139,26 @@ contract LiquidationManager is ProtocolBase, ILiquidationManager {
         // 2. Freeze credit line for 12 months
         ICreditLineManager(creditLineManager).freeze(loan.borrower);
 
-        // 3. Reserve covers what it can; remainder is true bad debt written off.
-        uint256 reserveBal  = IReserveModule(reserveModule).reserveBalance();
-        uint256 recovered   = reserveBal >= outstanding ? outstanding : reserveBal;
-        uint256 writtenOff  = outstanding - recovered;
-        IReserveModule(reserveModule).absorbLoss(outstanding);
+        // 3. Slash the borrower's SBT stake into the reserve, so their own
+        //    skin-in-the-game tops up loss coverage before LPs bear anything.
+        if (stakeVault != address(0)) {
+            uint256 staked = ISBTStakeVault(stakeVault).stakes(loan.borrower).amount;
+            if (staked > 0) {
+                ISBTStakeVault(stakeVault).slash(loan.borrower, staked, reserveModule);
+            }
+        }
 
-        // 4. Finalise loan state → WrittenOff (also reduces pool._totalOutstanding)
+        // 4. Reserve reimburses the pool for as much of the loss as it can cover;
+        //    only the uncovered remainder is true bad debt borne by LPs.
+        uint256 recovered  = IReserveModule(reserveModule).absorbLoss(outstanding);
+        uint256 writtenOff = outstanding - recovered;
+
+        // 5. Finalise loan state → WrittenOff (also reduces pool._totalOutstanding)
         pool.markWrittenOff(loanId);
 
         emit LoanLiquidated(loanId, loan.borrower, recovered, writtenOff);
     }
 
     // ── Gap ───────────────────────────────────────────────────────────────────
-    uint256[46] private __gap;
+    uint256[45] private __gap;
 }

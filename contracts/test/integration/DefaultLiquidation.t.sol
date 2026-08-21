@@ -130,20 +130,32 @@ contract DefaultLiquidationIntegrationTest is DeployHelper {
 
     // ── Reserve module ────────────────────────────────────────────────────────
 
-    function test_liquidation_reserveAbsorbsOutstanding() public {
+    function test_liquidation_reserveReimbursesPoolAndSlashesStake() public {
         _advanceToDefaulted();
 
-        // absorbLoss records the write-off but does not transfer USDC out;
-        // just verify the liquidation completes without revert and the reserve
-        // balance remains at or above what it held before (no unexpected drain).
+        ILendingPool.Loan memory loan = pool.getLoan(loanId);
+        uint256 outstanding = loan.principal - loan.repaid;
+
         uint256 reserveBefore = reserve.reserveBalance();
+        uint256 poolBefore    = usdc.balanceOf(address(pool));
+        uint256 stake         = stakeVault.stakes(alice).amount;
+        assertGt(stake, 0, "borrower stake should still be held pre-liquidation");
+
+        // Reserve is pre-funded far above the outstanding, so the loss is fully covered.
         vm.prank(keeper);
         liqMgr.liquidate(loanId);
 
-        assertGe(reserve.reserveBalance(), 0, "reserve balance must remain non-negative");
+        // The pool is made whole for the full outstanding — LPs bear no loss here.
+        assertEq(usdc.balanceOf(address(pool)), poolBefore + outstanding, "pool reimbursed in full");
+        // The defaulter's stake is slashed into the reserve, then the reserve pays
+        // the loss: net reserve change = stake - outstanding.
+        assertEq(
+            reserve.reserveBalance(),
+            reserveBefore + stake - outstanding,
+            "reserve reflects slash-in then payout-out"
+        );
+        assertEq(stakeVault.stakes(alice).amount, 0, "stake fully slashed to reserve");
         assertEq(uint8(pool.getLoan(loanId).state), uint8(ILendingPool.LoanState.WrittenOff));
-        // absorbLoss records the write-off in an event; the balance does not decrease.
-        assertEq(reserve.reserveBalance(), reserveBefore);
     }
 
     // ── Batch liquidation ─────────────────────────────────────────────────────
